@@ -19,3 +19,15 @@ body {
   box-sizing: border-box;
 }
 
+
+.country {
+  fill: #789da5;
+  stroke: white;
+  stroke-width: 2;
+  cursor: pointer;
+}
+
+.country:hover {
+  fill: #e2a94b;
+}
+

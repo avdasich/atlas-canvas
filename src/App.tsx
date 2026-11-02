@@ -1,6 +1,7 @@
 
 import { useState } from "react";
 import WorldMap from "./components/WorldMap";
+import CountryCanvas from "./components/CountryCanvas";
 import "./App.css";
 
 function App() {
@@ -16,14 +17,10 @@ function App() {
 
   if (selectedCountry !== "") {
     return (
-      <main className="container">
-        <h1>{selectedCountry}</h1>
-        <p>Здесь будет бесконечный холст</p>
-
-        <button onClick={handleBackClick}>
-          Вернуться к карте
-        </button>
-      </main>
+      <CountryCanvas
+        countryName={selectedCountry}
+        onBack={handleBackClick}
+      />
     );
   }
 

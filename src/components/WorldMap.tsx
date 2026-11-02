@@ -3,7 +3,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { geoNaturalEarth1, geoPath } from "d3-geo";
 import { feature } from "topojson-client";
-import type { GeometryCollection, Topology } from "topojson-specification";
+import type {
+  GeometryCollection,
+  Topology,
+} from "topojson-specification";
 import worldData from "world-atlas/countries-110m.json";
 
 type WorldMapProps = {
@@ -100,7 +103,9 @@ function WorldMap({ onCountrySelect }: WorldMapProps) {
       passive: false,
     });
 
-    return () => svg.removeEventListener("wheel", handleWheel);
+    return () => {
+      svg.removeEventListener("wheel", handleWheel);
+    };
   }, [zoomAt]);
 
   function handleMouseDown(event: ReactMouseEvent<SVGSVGElement>) {

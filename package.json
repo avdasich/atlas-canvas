@@ -7,14 +7,17 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "test": "node tests/run.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-opener": "^2",
     "d3-geo": "^3.1.1",
+    "konva": "^10.9.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "react-konva": "^19.3.2",
     "topojson-client": "^3.1.0",
     "world-atlas": "^2.0.2"
   },

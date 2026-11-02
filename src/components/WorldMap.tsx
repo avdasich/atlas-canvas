@@ -1,196 +1,71 @@
-
-import { useCallback, useEffect, useRef, useState } from "react";
-import type { MouseEvent as ReactMouseEvent } from "react";
-import { geoNaturalEarth1, geoPath } from "d3-geo";
-import { feature } from "topojson-client";
-import type {
-  GeometryCollection,
-  Topology,
-} from "topojson-specification";
-import worldData from "world-atlas/countries-110m.json";
-
-type WorldMapProps = {
-  onCountrySelect: (name: string) => void;
-};
-
-type View = {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-};
-
-const MAP_WIDTH = 960;
-const MAP_HEIGHT = 500;
-
-const world = worldData as unknown as Topology;
-
-const countries = feature(
-  world,
-  world.objects.countries as GeometryCollection<{ name: string }>
-);
-
-const projection = geoNaturalEarth1().fitSize(
-  [MAP_WIDTH, MAP_HEIGHT],
-  countries
-);
-
+import { useEffect, useRef, useState } from 'react';
+import type { MouseEvent as ReactMouseEvent } from 'react';
+import { geoNaturalEarth1, geoPath } from 'd3-geo';
+import { countries, featureCountry, worldFeatures } from '../domain/world';
+import type { Country } from '../domain/countries';
+import { repository } from '../services/SceneRepository';
+const WIDTH = 960, HEIGHT = 500;
+const projection = geoNaturalEarth1().fitSize([WIDTH, HEIGHT], { type: 'FeatureCollection', features: worldFeatures });
 const path = geoPath(projection);
-
-function WorldMap({ onCountrySelect }: WorldMapProps) {
-  const [view, setView] = useState<View>({
-    x: 0,
-    y: 0,
-    width: MAP_WIDTH,
-    height: MAP_HEIGHT,
-  });
-
+type View = { x: number; y: number; width: number; height: number };
+const initialView: View = { x: 0, y: 0, width: WIDTH, height: HEIGHT };
+export default function WorldMap({ onCountrySelect }: { onCountrySelect: (country: Country) => void }) {
+  const [view, setView] = useState(initialView);
+  const [query, setQuery] = useState('');
+  const [showList, setShowList] = useState(false);
+  const [filled, setFilled] = useState<string[]>([]);
+  const [error, setError] = useState('');
   const svgRef = useRef<SVGSVGElement>(null);
-
-  const dragRef = useRef<{
-    mouseX: number;
-    mouseY: number;
-    view: View;
-  } | null>(null);
-
-  const movedRef = useRef(false);
-
-  const zoomAt = useCallback(
-    (factor: number, px = 0.5, py = 0.5) => {
-      setView((current) => {
-        const width = Math.max(
-          MAP_WIDTH / 6,
-          Math.min(MAP_WIDTH, current.width / factor)
-        );
-
-        const height = width * MAP_HEIGHT / MAP_WIDTH;
-
-        const anchorX = current.x + px * current.width;
-        const anchorY = current.y + py * current.height;
-
-        const x = Math.max(
-          0,
-          Math.min(MAP_WIDTH - width, anchorX - px * width)
-        );
-
-        const y = Math.max(
-          0,
-          Math.min(MAP_HEIGHT - height, anchorY - py * height)
-        );
-
-        return { x, y, width, height };
-      });
-    },
-    []
-  );
-
+  const viewRef = useRef(view); viewRef.current = view;
+  const drag = useRef<{ x: number; y: number; view: View; scaleX: number; scaleY: number } | null>(null);
+  const moved = useRef(false);
+  const results = countries.filter(c => `${c.nameRu} ${c.nameEn}`.toLocaleLowerCase().includes(query.toLocaleLowerCase().trim()));
   useEffect(() => {
-    const svg = svgRef.current;
-    if (!svg) return;
-
-    function handleWheel(event: WheelEvent) {
-      event.preventDefault();
-
-      const rect = svg!.getBoundingClientRect();
-
-      const px = (event.clientX - rect.left) / rect.width;
-      const py = (event.clientY - rect.top) / rect.height;
-
-      zoomAt(event.deltaY < 0 ? 1.2 : 1 / 1.2, px, py);
-    }
-
-    svg.addEventListener("wheel", handleWheel, {
-      passive: false,
+    let cancelled = false;
+    repository.filled().then(ids => {
+      if (!cancelled) setFilled(ids);
+    }).catch(e => { if (!cancelled) setError(`Не удалось прочитать заполненность стран: ${String(e)}`); });
+    return () => { cancelled = true; };
+  }, []);
+  function zoom(factor: number, px = 0.5, py = 0.5) {
+    setView(current => {
+      const width = Math.max(WIDTH / 18, Math.min(WIDTH, current.width / factor)), height = width * HEIGHT / WIDTH;
+      return { width, height, x: Math.max(0, Math.min(WIDTH - width, current.x + px * current.width - px * width)), y: Math.max(0, Math.min(HEIGHT - height, current.y + py * current.height - py * height)) };
     });
-
-    return () => {
-      svg.removeEventListener("wheel", handleWheel);
-    };
-  }, [zoomAt]);
-
-  function handleMouseDown(event: ReactMouseEvent<SVGSVGElement>) {
-    if (event.button !== 0) return;
-
-    movedRef.current = false;
-
-    dragRef.current = {
-      mouseX: event.clientX,
-      mouseY: event.clientY,
-      view,
-    };
   }
-
-  function handleMouseMove(event: ReactMouseEvent<SVGSVGElement>) {
-    const drag = dragRef.current;
-    if (!drag) return;
-
-    const dx = event.clientX - drag.mouseX;
-    const dy = event.clientY - drag.mouseY;
-
-    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
-      movedRef.current = true;
-    }
-
-    if (!movedRef.current) return;
-
-    const rect = event.currentTarget.getBoundingClientRect();
-
-    const x = Math.max(
-      0,
-      Math.min(
-        MAP_WIDTH - drag.view.width,
-        drag.view.x - (dx / rect.width) * drag.view.width
-      )
-    );
-
-    const y = Math.max(
-      0,
-      Math.min(
-        MAP_HEIGHT - drag.view.height,
-        drag.view.y - (dy / rect.height) * drag.view.height
-      )
-    );
-
-    setView({ ...drag.view, x, y });
+  useEffect(() => {
+    const svg = svgRef.current; if (!svg) return;
+    const wheel = (e: WheelEvent) => {
+      e.preventDefault(); const matrix = svg.getScreenCTM(); if (!matrix) return;
+      const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(matrix.inverse()), current = viewRef.current;
+      zoom(Math.exp(-Math.max(-100, Math.min(100, e.deltaY)) * 0.002), (p.x - current.x) / current.width, (p.y - current.y) / current.height);
+    };
+    svg.addEventListener('wheel', wheel, { passive: false });
+    return () => svg.removeEventListener('wheel', wheel);
+  }, []);
+  function start(e: ReactMouseEvent<SVGSVGElement>) {
+    if (e.button !== 0) return;
+    const matrix = e.currentTarget.getScreenCTM(); if (!matrix) return;
+    moved.current = false;
+    drag.current = { x: e.clientX, y: e.clientY, view, scaleX: matrix.a, scaleY: matrix.d };
   }
-
-  return (
-    <>
-      <div className="map-controls">
-        <button onClick={() => zoomAt(1.5)}>+</button>
-        <button onClick={() => zoomAt(1 / 1.5)}>−</button>
-      </div>
-
-      <svg
-        ref={svgRef}
-        className="world-map"
-        viewBox={`${view.x} ${view.y} ${view.width} ${view.height}`}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={() => (dragRef.current = null)}
-        onMouseLeave={() => (dragRef.current = null)}
-      >
-        {countries.features.map((country, index) => {
-          const name = country.properties.name;
-
-          return (
-            <path
-              key={country.id ?? index}
-              d={path(country) ?? ""}
-              className="country"
-              onClick={() => {
-                if (!movedRef.current) {
-                  onCountrySelect(name);
-                }
-              }}
-            >
-              <title>{name}</title>
-            </path>
-          );
-        })}
-      </svg>
-    </>
-  );
+  function move(e: ReactMouseEvent<SVGSVGElement>) {
+    const d = drag.current; if (!d) return;
+    const dx = e.clientX - d.x, dy = e.clientY - d.y;
+    if (Math.hypot(dx, dy) > 3) moved.current = true;
+    if (!moved.current) return;
+    setView({ ...d.view, x: Math.max(0, Math.min(WIDTH - d.view.width, d.view.x - dx / d.scaleX)), y: Math.max(0, Math.min(HEIGHT - d.view.height, d.view.y - dy / d.scaleY)) });
+  }
+  return <>
+    <div className="map-bar"><div className="country-search"><input aria-label="Поиск страны" placeholder="Найти страну на русском или английском…" value={query} onFocus={() => setShowList(true)} onChange={e => { setQuery(e.target.value); setShowList(true); }} onKeyDown={e => { if (e.key === 'Escape') setShowList(false); if (e.key === 'Enter' && results[0]) onCountrySelect(results[0]); }} /><button aria-expanded={showList} onClick={() => setShowList(v => !v)}>Все страны</button>
+      {showList && <div className="country-results" role="list" aria-label="Страны">{results.map(c => <button key={c.id} onClick={() => onCountrySelect(c)}><span>{c.nameRu}<small>{c.nameEn}</small></span>{filled.includes(c.id) && <span className="filled-dot" title="Есть записи">●</span>}</button>)}{!results.length && <p>Страна не найдена</p>}</div>}
+    </div><div className="map-controls"><button aria-label="Приблизить карту" onClick={() => zoom(1.5)}>+</button><button aria-label="Отдалить карту" onClick={() => zoom(1 / 1.5)}>−</button><button onClick={() => setView(initialView)}>Сброс вида</button></div></div>
+    {error && <p role="alert">{error}</p>}
+    <svg ref={svgRef} className="world-map" aria-label="Карта мира" viewBox={`${view.x} ${view.y} ${view.width} ${view.height}`} onMouseDown={start} onMouseMove={move} onMouseUp={() => { drag.current = null; }} onMouseLeave={() => { drag.current = null; }}>
+      {worldFeatures.map((f, index) => {
+        const c = featureCountry(index);
+        return <path key={c.id} d={path(f) ?? ''} data-country-id={c.id} className={`country ${filled.includes(c.id) ? 'filled' : ''}`} onClick={() => { if (!moved.current) onCountrySelect(c); }}><title>{c.nameRu} · {c.nameEn}</title></path>;
+      })}
+    </svg><footer className="map-footer"><span><i className="legend-dot" /> Есть записи</span><span>Колесо — масштаб · Мышь — перемещение</span><span>{countries.length} стран и территорий в каталоге</span></footer>
+  </>;
 }
-
-export default WorldMap;

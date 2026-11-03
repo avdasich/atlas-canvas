@@ -38,7 +38,6 @@ const metadata = JSON.parse(
       '--manifest-path',
       'src-tauri/Cargo.toml',
       '--locked',
-      '--offline',
       '--format-version',
       '1',
     ],

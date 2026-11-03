@@ -1,6 +1,7 @@
 import { readFileSync, readdirSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 const notices = [];
 const upstream = existsSync('public/licenses/upstream/index.json')
   ? JSON.parse(readFileSync('public/licenses/upstream/index.json', 'utf8'))
@@ -47,11 +48,19 @@ for (const p of metadata.packages) {
     } catch {}
   }
   if (!files.length)
-    files = (upstream[`${p.name}@${p.version}`] ?? []).map((file) => ({
-      name: file.name,
-      text: readFileSync(join('public', file.path), 'utf8'),
-      source: file.source,
-    }));
+    files = (upstream[`${p.name}@${p.version}`] ?? []).map((file) => {
+      const bytes = readFileSync(join('public', file.path));
+      const sha256 = createHash('sha256').update(bytes).digest('hex');
+      if (file.sha256 && sha256 !== file.sha256)
+        throw new Error(`Upstream license checksum mismatch: ${file.path}`);
+      return {
+        name: file.name,
+        text: bytes.toString('utf8'),
+        source: file.source,
+        ...(file.commit ? { commit: file.commit } : {}),
+        ...(file.sha256 ? { sha256 } : {}),
+      };
+    });
   notices.push({
     ecosystem: 'cargo',
     name: p.name,

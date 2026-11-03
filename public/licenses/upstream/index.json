@@ -201,8 +201,24 @@
       "source": "https://github.com/madsmtm/objc2/blob/8d214f5477365ffcbcbb7de058c86ed9a518efb7/LICENSE.md"
     }
   ],
-  "r-efi@5.3.0": [],
-  "r-efi@6.0.0": [],
+  "r-efi@5.3.0": [
+    {
+      "name": "AUTHORS",
+      "path": "licenses/upstream/r-efi-r-efi-97b55bed1c/AUTHORS",
+      "source": "https://github.com/r-efi/r-efi/blob/97b55bed1c2c91dcbf787674849f05337ff80b33/AUTHORS",
+      "commit": "97b55bed1c2c91dcbf787674849f05337ff80b33",
+      "sha256": "ff92bed461f50338dd703a9ba9aee496a425957873df1d91192776e4bdf5dda7"
+    }
+  ],
+  "r-efi@6.0.0": [
+    {
+      "name": "AUTHORS",
+      "path": "licenses/upstream/r-efi-r-efi-7e1b0322d3/AUTHORS",
+      "source": "https://github.com/r-efi/r-efi/blob/7e1b0322d31d625f81a5656096330934f9cd835d/AUTHORS",
+      "commit": "7e1b0322d31d625f81a5656096330934f9cd835d",
+      "sha256": "d027e91dbc9cdbb2f1190068e498bd6b61cff022b6a032b191021ba658d96111"
+    }
+  ],
   "rsqlite-vfs@0.2.0": [
     {
       "name": "LICENSE",
@@ -210,7 +226,15 @@
       "source": "https://github.com/Spxg/sqlite-wasm-rs/blob/3d8318430bacd7d6a1aafdf5b5e54fb0fee8d451/LICENSE"
     }
   ],
-  "selectors@0.38.0": [],
+  "selectors@0.38.0": [
+    {
+      "name": "index.txt",
+      "path": "licenses/upstream/mozilla-bedrock-a15178c3c7/media/MPL/2.0/index.txt",
+      "source": "https://github.com/mozilla/bedrock/blob/a15178c3c7c976c67b3641af77cae0b66093a175/media/MPL/2.0/index.txt",
+      "commit": "a15178c3c7c976c67b3641af77cae0b66093a175",
+      "sha256": "3f3d9e0024b1921b067d6f7f88deb4a60cbe7a78e76c64e3f1d7fc3b779b9d04"
+    }
+  ],
   "tauri-plugin@2.7.2": [
     {
       "name": "LICENSE-APACHE-2.0",
@@ -247,6 +271,54 @@
       "name": "LICENSE",
       "path": "licenses/upstream/wravery-webview2-rs-dffa41a8a4/LICENSE",
       "source": "https://github.com/wravery/webview2-rs/blob/dffa41a8a46d3f5565eefbff2de57d38d399f158/LICENSE"
+    }
+  ],
+  "libappindicator-sys@0.9.0": [
+    {
+      "name": "LICENSE-MIT",
+      "path": "licenses/upstream/tauri-apps-libappindicator-rs-eafd1e3682/LICENSE-MIT",
+      "source": "https://github.com/tauri-apps/libappindicator-rs/blob/eafd1e3682a1247f595410266091e9684021cb6f/LICENSE-MIT",
+      "commit": "eafd1e3682a1247f595410266091e9684021cb6f",
+      "sha256": "eb227437252b2a7a9c1fc342c93ade1f3d7ce38cc6dd754f613db07d53ceff0b"
+    },
+    {
+      "name": "LICENSE-APACHE",
+      "path": "licenses/upstream/tauri-apps-libappindicator-rs-eafd1e3682/LICENSE-APACHE",
+      "source": "https://github.com/tauri-apps/libappindicator-rs/blob/eafd1e3682a1247f595410266091e9684021cb6f/LICENSE-APACHE",
+      "commit": "eafd1e3682a1247f595410266091e9684021cb6f",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2"
+    }
+  ],
+  "winapi-i686-pc-windows-gnu@0.4.0": [
+    {
+      "name": "LICENSE-MIT",
+      "path": "licenses/upstream/retep998-winapi-rs-796a8e6c29/LICENSE-MIT",
+      "source": "https://github.com/retep998/winapi-rs/blob/796a8e6c2971dc2ff1bcff166e6671284f9b5b6b/LICENSE-MIT",
+      "commit": "796a8e6c2971dc2ff1bcff166e6671284f9b5b6b",
+      "sha256": "ce7bc3499fee93d5022ef430d5e4201e79a6d9154f3974e42f41349f0569e09b"
+    },
+    {
+      "name": "LICENSE-APACHE",
+      "path": "licenses/upstream/retep998-winapi-rs-796a8e6c29/LICENSE-APACHE",
+      "source": "https://github.com/retep998/winapi-rs/blob/796a8e6c2971dc2ff1bcff166e6671284f9b5b6b/LICENSE-APACHE",
+      "commit": "796a8e6c2971dc2ff1bcff166e6671284f9b5b6b",
+      "sha256": "b40930bbcf80744c86c46a12bc9da056641d722716c378f5659b9e555ef833e1"
+    }
+  ],
+  "winapi-x86_64-pc-windows-gnu@0.4.0": [
+    {
+      "name": "LICENSE-MIT",
+      "path": "licenses/upstream/retep998-winapi-rs-796a8e6c29/LICENSE-MIT",
+      "source": "https://github.com/retep998/winapi-rs/blob/796a8e6c2971dc2ff1bcff166e6671284f9b5b6b/LICENSE-MIT",
+      "commit": "796a8e6c2971dc2ff1bcff166e6671284f9b5b6b",
+      "sha256": "ce7bc3499fee93d5022ef430d5e4201e79a6d9154f3974e42f41349f0569e09b"
+    },
+    {
+      "name": "LICENSE-APACHE",
+      "path": "licenses/upstream/retep998-winapi-rs-796a8e6c29/LICENSE-APACHE",
+      "source": "https://github.com/retep998/winapi-rs/blob/796a8e6c2971dc2ff1bcff166e6671284f9b5b6b/LICENSE-APACHE",
+      "commit": "796a8e6c2971dc2ff1bcff166e6671284f9b5b6b",
+      "sha256": "b40930bbcf80744c86c46a12bc9da056641d722716c378f5659b9e555ef833e1"
     }
   ]
 }

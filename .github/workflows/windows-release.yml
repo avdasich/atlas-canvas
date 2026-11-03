@@ -29,10 +29,10 @@ jobs:
 
       - name: Install frontend dependencies
         run: npm ci
+      - name: Check formatting
+        run: npm run format:check
       - name: Test editor and migrations
         run: npm test
-      - name: Build frontend
-        run: npm run build
       - name: Test SQLite storage
         run: cargo test --locked --manifest-path src-tauri/Cargo.toml
 

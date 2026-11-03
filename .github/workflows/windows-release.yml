@@ -45,6 +45,9 @@ jobs:
             throw "Tag must be $expectedTag; update the app version before creating a new release."
           }
 
+      - name: Bundle third-party notices
+        run: npm run notices
+
       - name: Include WebView2 for offline installation
         shell: pwsh
         run: |

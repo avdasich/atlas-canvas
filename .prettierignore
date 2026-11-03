@@ -1,0 +1,8 @@
+node_modules/
+dist/
+src-tauri/target/
+public/fonts/
+public/licenses/
+package-lock.json
+src/domain/country-regions.json
+src-tauri/gen/

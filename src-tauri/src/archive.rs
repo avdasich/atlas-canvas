@@ -1,6 +1,8 @@
+use crate::operations::{Operation, ProgressReader};
+use crate::validation::{validate_asset_id, validate_id, validate_scene};
 use crate::{
     media::{new_id, safe_asset_path},
-    storage::{Result, connect, directory, err, validate_asset_id, validate_id, validate_scene},
+    storage::{Result, connect, directory, err},
 };
 use rusqlite::{OptionalExtension, params};
 use serde::{Deserialize, Serialize};
@@ -38,6 +40,8 @@ pub struct Manifest {
     version: u32,
     scenes: Vec<ArchivedScene>,
     assets: Vec<Asset>,
+    #[serde(default)]
+    preferences: BTreeMap<String, Value>,
 }
 #[derive(Clone)]
 pub struct Staged {
@@ -46,8 +50,8 @@ pub struct Staged {
 }
 #[derive(Default)]
 pub struct Imports(pub Mutex<HashMap<String, Staged>>);
-fn checksum(path: &Path) -> Result<String> {
-    let mut f = fs::File::open(path).map_err(err)?;
+fn checksum_with_operation(path: &Path, operation: Option<&Operation>) -> Result<String> {
+    let mut f = ProgressReader::new(fs::File::open(path).map_err(err)?, operation);
     let mut h = Sha256::new();
     let mut b = [0; 65536];
     loop {
@@ -60,33 +64,37 @@ fn checksum(path: &Path) -> Result<String> {
     Ok(format!("{:x}", h.finalize()))
 }
 fn scene_assets(s: &Value) -> BTreeSet<String> {
-    let mut ids = BTreeSet::new();
-    if let Some(items) = s["items"].as_array() {
-        for i in items {
-            if let Some(id) = i["assetId"].as_str() {
-                ids.insert(id.to_owned());
-            }
-        }
-    }
-    if let Some(id) = s["theme"]["backgroundAssetId"].as_str() {
-        ids.insert(id.to_owned());
-    }
-    if let Some(family) = s["theme"]["fontFamily"].as_str() {
-        if let Some(id) = family.strip_prefix("AtlasFont-") {
-            ids.insert(id.to_owned());
-        }
-    }
-    if let Some(items) = s["items"].as_array() {
-        for i in items {
-            if let Some(family) = i["fontFamily"].as_str() {
-                if let Some(id) = family.strip_prefix("AtlasFont-") {
-                    ids.insert(id.to_owned());
+    fn collect(v: &Value, ids: &mut BTreeSet<String>) {
+        match v {
+            Value::Object(o) => {
+                for (key, value) in o {
+                    if ["assetId", "backgroundAssetId"].contains(&key.as_str()) {
+                        if let Some(id) = value.as_str() {
+                            ids.insert(id.to_owned());
+                        }
+                    } else if key == "fontFamily" {
+                        if let Some(id) = value.as_str().and_then(|s| s.strip_prefix("AtlasFont-"))
+                        {
+                            ids.insert(id.to_owned());
+                        }
+                    } else {
+                        collect(value, ids);
+                    }
                 }
             }
+            Value::Array(a) => {
+                for v in a {
+                    collect(v, ids);
+                }
+            }
+            _ => (),
         }
     }
+    let mut ids = BTreeSet::new();
+    collect(s, &mut ids);
     ids
 }
+
 fn remap(v: &mut Value, m: &BTreeMap<String, String>) {
     match v {
         Value::Object(o) => {
@@ -96,6 +104,14 @@ fn remap(v: &mut Value, m: &BTreeMap<String, String>) {
                         if let Some(new) = m.get(id) {
                             *v = Value::String(new.clone());
                         }
+                    }
+                } else if k == "fontFamily" {
+                    if let Some(new) = v
+                        .as_str()
+                        .and_then(|s| s.strip_prefix("AtlasFont-"))
+                        .and_then(|id| m.get(id))
+                    {
+                        *v = Value::String(format!("AtlasFont-{new}"));
                     }
                 } else {
                     remap(v, m);
@@ -107,17 +123,21 @@ fn remap(v: &mut Value, m: &BTreeMap<String, String>) {
                 remap(v, m)
             }
         }
-        Value::String(s) => {
-            if let Some(id) = s.strip_prefix("AtlasFont-") {
-                if let Some(new) = m.get(id) {
-                    *s = format!("AtlasFont-{new}");
-                }
-            }
-        }
         _ => (),
     }
 }
 pub(crate) fn write_archive(dir: &Path, dest: &Path, country: Option<&str>) -> Result<()> {
+    write_archive_with_operation(dir, dest, country, None)
+}
+fn write_archive_with_operation(
+    dir: &Path,
+    dest: &Path,
+    country: Option<&str>,
+    operation: Option<&Operation>,
+) -> Result<()> {
+    if let Some(op) = operation {
+        op.check()?;
+    }
     if dest.exists() {
         return Err("Файл уже существует. Выберите новое имя.".into());
     }
@@ -141,7 +161,24 @@ pub(crate) fn write_archive(dir: &Path, dest: &Path, country: Option<&str>) -> R
             scene: serde_json::from_str(&raw).map_err(err)?,
         });
     }
-    let needed: BTreeSet<_> = scenes.iter().flat_map(|s| scene_assets(&s.scene)).collect();
+    let mut preferences = BTreeMap::new();
+    if country.is_none() {
+        let mut q = conn
+            .prepare("SELECT key,json FROM preferences")
+            .map_err(err)?;
+        for row in q
+            .query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))
+            .map_err(err)?
+        {
+            let (key, raw) = row.map_err(err)?;
+            preferences.insert(key, serde_json::from_str(&raw).map_err(err)?);
+        }
+    }
+    let needed: BTreeSet<_> = scenes
+        .iter()
+        .flat_map(|s| scene_assets(&s.scene))
+        .chain(preferences.values().flat_map(scene_assets))
+        .collect();
     let mut assets = Vec::new();
     let mut q = conn
         .prepare("SELECT id,original_name,internal_path,preview_path,bytes,mime FROM assets")
@@ -165,14 +202,16 @@ pub(crate) fn write_archive(dir: &Path, dest: &Path, country: Option<&str>) -> R
         if !needed.contains(&a.id) {
             continue;
         }
-        a.sha256 = checksum(&safe_asset_path(dir, &a.internal_path)?)?;
-        a.preview_sha256 = checksum(&safe_asset_path(dir, &a.preview_path)?)?;
+        a.sha256 = checksum_with_operation(&safe_asset_path(dir, &a.internal_path)?, operation)?;
+        a.preview_sha256 =
+            checksum_with_operation(&safe_asset_path(dir, &a.preview_path)?, operation)?;
         assets.push(a);
     }
     if assets.len() != needed.len() {
         return Err("Отсутствуют вложения. Архив не создан.".into());
     }
     let manifest = Manifest {
+        preferences,
         format: "atlas-canvas".into(),
         version: 1,
         scenes,
@@ -205,9 +244,12 @@ pub(crate) fn write_archive(dir: &Path, dest: &Path, country: Option<&str>) -> R
             )
             .map_err(err)?;
             let mut f = fs::File::open(safe_asset_path(dir, &relative)?).map_err(err)?;
-            std::io::copy(&mut f, &mut zip).map_err(err)?;
+            std::io::copy(&mut ProgressReader::new(&mut f, operation), &mut zip).map_err(err)?;
         }
         zip.finish().map_err(err)?.sync_all().map_err(err)?;
+        if let Some(op) = operation {
+            op.check()?;
+        }
         if fs::hard_link(&temporary, dest).is_err() {
             let mut destination = fs::OpenOptions::new()
                 .write(true)
@@ -215,8 +257,11 @@ pub(crate) fn write_archive(dir: &Path, dest: &Path, country: Option<&str>) -> R
                 .open(dest)
                 .map_err(err)?;
             let mut source = fs::File::open(&temporary).map_err(err)?;
-            if let Err(e) =
-                std::io::copy(&mut source, &mut destination).and_then(|_| destination.sync_all())
+            if let Err(e) = std::io::copy(
+                &mut ProgressReader::new(&mut source, operation),
+                &mut destination,
+            )
+            .and_then(|_| destination.sync_all())
             {
                 drop(destination);
                 let _ = fs::remove_file(dest);
@@ -228,7 +273,18 @@ pub(crate) fn write_archive(dir: &Path, dest: &Path, country: Option<&str>) -> R
     let _ = fs::remove_file(temporary);
     result
 }
+#[cfg(test)]
 fn stage_archive(file: &Path, staging: &Path) -> Result<Manifest> {
+    stage_archive_with_operation(file, staging, None)
+}
+fn stage_archive_with_operation(
+    file: &Path,
+    staging: &Path,
+    operation: Option<&Operation>,
+) -> Result<Manifest> {
+    if let Some(op) = operation {
+        op.check()?;
+    }
     let mut zip = ZipArchive::new(fs::File::open(file).map_err(err)?).map_err(err)?;
     if zip.len() > 100000 {
         return Err("Слишком много файлов в архиве".into());
@@ -301,6 +357,19 @@ fn stage_archive(file: &Path, staging: &Path) -> Result<Manifest> {
             return Err("В архиве не хватает вложений".into());
         }
     }
+    for (key, value) in &manifest.preferences {
+        if !["map", "themes", "table-styles", "editor"].contains(&key.as_str())
+            || !scene_assets(value).is_subset(&asset_ids)
+        {
+            return Err("Повреждены настройки архива или не хватает их вложений".into());
+        }
+        if key == "themes" {
+            for preset in value.as_array().ok_or("Повреждена библиотека оформлений")?
+            {
+                validate_scene(&serde_json::json!({"schemaVersion":3,"items":[],"camera":{"x":0,"y":0,"scale":1},"theme":preset["theme"]}).to_string())?;
+            }
+        }
+    }
     let mut names = BTreeSet::new();
     for i in 0..zip.len() {
         let f = zip.by_index(i).map_err(err)?;
@@ -327,10 +396,14 @@ fn stage_archive(file: &Path, staging: &Path) -> Result<Manifest> {
             .create_new(true)
             .open(&path)
             .map_err(err)?;
-        let bytes = std::io::copy(&mut f.take(expected + 1), &mut output).map_err(err)?;
+        let bytes = std::io::copy(
+            &mut ProgressReader::new(f.take(expected + 1), operation),
+            &mut output,
+        )
+        .map_err(err)?;
         output.sync_all().map_err(err)?;
         drop(output);
-        if bytes != expected || checksum(&path)? != *hash {
+        if bytes != expected || checksum_with_operation(&path, operation)? != *hash {
             return Err(format!("Нарушена целостность файла {name}"));
         }
     }
@@ -350,7 +423,12 @@ pub struct Preview {
     assets: usize,
 }
 #[tauri::command]
-pub async fn export_atlas(app: AppHandle, country_id: Option<String>) -> Result<Option<String>> {
+pub async fn export_atlas(
+    app: AppHandle,
+    country_id: Option<String>,
+    operation_id: Option<String>,
+) -> Result<Option<String>> {
+    let (operation, _) = Operation::start(&app, operation_id)?;
     tauri::async_runtime::spawn_blocking(move || {
         if let Some(id) = &country_id {
             validate_id(id)?;
@@ -366,14 +444,24 @@ pub async fn export_atlas(app: AppHandle, country_id: Option<String>) -> Result<
             return Ok(None);
         };
         let path = picked.into_path().map_err(err)?;
-        write_archive(&directory(&app)?, &path, country_id.as_deref())?;
+        write_archive_with_operation(
+            &directory(&app)?,
+            &path,
+            country_id.as_deref(),
+            Some(&operation),
+        )?;
         Ok(Some(path.to_string_lossy().into_owned()))
     })
     .await
     .map_err(err)?
 }
 #[tauri::command]
-pub async fn inspect_archive(app: AppHandle, state: State<'_, Imports>) -> Result<Option<Preview>> {
+pub async fn inspect_archive(
+    app: AppHandle,
+    state: State<'_, Imports>,
+    operation_id: Option<String>,
+) -> Result<Option<Preview>> {
+    let (operation, _) = Operation::start(&app, operation_id)?;
     let handle = app.clone();
     let staged = tauri::async_runtime::spawn_blocking(move || {
         let picked = handle
@@ -387,7 +475,7 @@ pub async fn inspect_archive(app: AppHandle, state: State<'_, Imports>) -> Resul
         };
         let path = picked.into_path().map_err(err)?;
         let dir = directory(&handle)?.join("imports").join(new_id());
-        match stage_archive(&path, &dir) {
+        match stage_archive_with_operation(&path, &dir, Some(&operation)) {
             Ok(manifest) => Ok(Some(Staged { dir, manifest })),
             Err(e) => {
                 let _ = fs::remove_dir_all(dir);
@@ -438,7 +526,19 @@ pub struct ImportResult {
     skipped: usize,
     backup: Option<String>,
 }
+#[cfg(test)]
 pub(crate) fn apply_staged(dir: &Path, staged: &Staged, replace: bool) -> Result<ImportResult> {
+    apply_staged_with_operation(dir, staged, replace, None)
+}
+fn apply_staged_with_operation(
+    dir: &Path,
+    staged: &Staged,
+    replace: bool,
+    operation: Option<&Operation>,
+) -> Result<ImportResult> {
+    if let Some(op) = operation {
+        op.check()?;
+    }
     let mut conn = connect(dir)?;
     let mut chosen = Vec::new();
     let mut skipped = 0;
@@ -456,7 +556,23 @@ pub(crate) fn apply_staged(dir: &Path, staged: &Staged, replace: bool) -> Result
             chosen.push(s.clone());
         }
     }
-    if chosen.is_empty() {
+    let preferences: BTreeMap<_, _> = staged
+        .manifest
+        .preferences
+        .iter()
+        .filter_map(|(key, value)| {
+            let exists: std::result::Result<bool, _> = conn.query_row(
+                "SELECT EXISTS(SELECT 1 FROM preferences WHERE key=?1)",
+                [key],
+                |r| r.get(0),
+            );
+            match exists {
+                Ok(true) if !replace => None,
+                _ => Some((key.clone(), value.clone())),
+            }
+        })
+        .collect();
+    if chosen.is_empty() && preferences.is_empty() {
         return Ok(ImportResult {
             imported: 0,
             skipped,
@@ -464,11 +580,43 @@ pub(crate) fn apply_staged(dir: &Path, staged: &Staged, replace: bool) -> Result
         });
     }
     fs::create_dir_all(dir.join("backups")).map_err(err)?;
-    let backup = dir
+    let mut backup = dir
         .join("backups")
         .join(format!("before-import-{}.atlas", new_id()));
-    write_archive(dir, &backup, None)?;
-    let needed: BTreeSet<_> = chosen.iter().flat_map(|s| scene_assets(&s.scene)).collect();
+    if let Err(reason) = write_archive_with_operation(dir, &backup, None, operation) {
+        if let Some(op) = operation {
+            op.check()?;
+        }
+        // A damaged scene or missing attachment must not prevent importing a healthy backup.
+        // Preserve the raw database and all remaining files before replacing any rows.
+        backup = dir.join("backups").join(format!("recovery-{}", new_id()));
+        fs::create_dir_all(backup.join("assets")).map_err(err)?;
+        conn.execute(
+            "VACUUM INTO ?1",
+            [backup.join("atlas.sqlite3").to_string_lossy().as_ref()],
+        )
+        .map_err(err)?;
+        for entry in fs::read_dir(dir.join("assets")).map_err(err)? {
+            let entry = entry.map_err(err)?;
+            if entry.file_type().map_err(err)?.is_file() {
+                let source = fs::File::open(entry.path()).map_err(err)?;
+                let mut output = fs::OpenOptions::new()
+                    .write(true)
+                    .create_new(true)
+                    .open(backup.join("assets").join(entry.file_name()))
+                    .map_err(err)?;
+                std::io::copy(&mut ProgressReader::new(source, operation), &mut output)
+                    .map_err(err)?;
+                output.sync_all().map_err(err)?;
+            }
+        }
+        fs::write(backup.join("README.txt"), format!("Raw recovery snapshot, not a portable .atlas archive. Preserved before import because: {reason}")).map_err(err)?;
+    }
+    let needed: BTreeSet<_> = chosen
+        .iter()
+        .flat_map(|s| scene_assets(&s.scene))
+        .chain(preferences.values().flat_map(scene_assets))
+        .collect();
     let mut mapping = BTreeMap::new();
     let mut copied = Vec::new();
     let result = (|| {
@@ -498,12 +646,25 @@ pub(crate) fn apply_staged(dir: &Path, staged: &Staged, replace: bool) -> Result
                         .open(&dest)
                         .map_err(err)?;
                     copied.push(dest.clone());
-                    std::io::copy(&mut input, &mut output).map_err(err)?;
+                    std::io::copy(&mut ProgressReader::new(&mut input, operation), &mut output)
+                        .map_err(err)?;
                     output.sync_all().map_err(err)?;
                 }
                 paths.push(relative);
             }
-            tx.execute("INSERT INTO assets(id,original_name,internal_path,preview_path,bytes,mime) VALUES (?1,?2,?3,?4,?5,?6)",params![id,a.original_name,paths[0],paths[1],a.bytes as i64,a.mime]).map_err(err)?;
+            tx.execute(
+                "INSERT INTO assets(id, original_name, internal_path, preview_path, bytes, mime)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                params![
+                    id,
+                    a.original_name,
+                    paths[0],
+                    paths[1],
+                    a.bytes as i64,
+                    a.mime
+                ],
+            )
+            .map_err(err)?;
         }
         for s in &mut chosen {
             remap(&mut s.scene, &mapping);
@@ -524,7 +685,19 @@ pub(crate) fn apply_staged(dir: &Path, staged: &Staged, replace: bool) -> Result
                 )
                 .map_err(err)?;
             }
-            tx.execute("INSERT INTO scenes(country_id,schema_version,scene_json,has_content) VALUES (?1,3,?2,?3) ON CONFLICT(country_id) DO UPDATE SET schema_version=3,scene_json=excluded.scene_json,has_content=excluded.has_content,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')",params![s.country_id,raw,filled]).map_err(err)?;
+            let version = s.scene["schemaVersion"].as_i64().unwrap();
+            tx.execute(
+                crate::storage::UPSERT_SCENE,
+                params![s.country_id, raw, filled, version],
+            )
+            .map_err(err)?;
+        }
+        for (key, mut value) in preferences.clone() {
+            remap(&mut value, &mapping);
+            tx.execute("INSERT INTO preferences(key,json) VALUES (?1,?2) ON CONFLICT(key) DO UPDATE SET json=excluded.json", params![key,value.to_string()]).map_err(err)?;
+        }
+        if let Some(op) = operation {
+            op.check()?;
         }
         tx.commit().map_err(err)?;
         Ok::<_, String>(())
@@ -547,7 +720,9 @@ pub async fn apply_archive(
     state: State<'_, Imports>,
     token: String,
     replace: bool,
+    operation_id: Option<String>,
 ) -> Result<ImportResult> {
+    let (operation, _) = Operation::start(&app, operation_id)?;
     let staged = state
         .0
         .lock()
@@ -556,9 +731,11 @@ pub async fn apply_archive(
         .cloned()
         .ok_or("Выберите архив заново")?;
     let dir = directory(&app)?;
-    let result = tauri::async_runtime::spawn_blocking(move || apply_staged(&dir, &staged, replace))
-        .await
-        .map_err(err)??;
+    let result = tauri::async_runtime::spawn_blocking(move || {
+        apply_staged_with_operation(&dir, &staged, replace, Some(&operation))
+    })
+    .await
+    .map_err(err)??;
     if let Some(s) = state.0.lock().map_err(err)?.remove(&token) {
         let _ = fs::remove_dir_all(s.dir);
     }
@@ -602,193 +779,8 @@ pub fn open_backup_folder(app: AppHandle) -> Result<()> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::storage::{read_scene, write_scene};
-    fn dir() -> PathBuf {
-        let p = std::env::temp_dir().join(format!("atlas-archive-{}", new_id()));
-        fs::create_dir_all(p.join("assets")).unwrap();
-        p
-    }
-    fn raw(asset: Option<&str>) -> String {
-        serde_json::json!({"schemaVersion":3,"items":asset.map(|id|vec![serde_json::json!({"id":"photo","kind":"image","assetId":id,"x":-15,"y":27})]).unwrap_or_else(||vec![serde_json::json!({"id":"note","kind":"note","content":"Казахстан","x":1,"y":2})]),"camera":{"x":5,"y":10,"scale":0.8},"theme":{"background":"#ffffff","pattern":"dots","fontFamily":"Arial"}}).to_string()
-    }
-    fn seed(path: &Path) -> String {
-        let id = new_id();
-        let relative = format!("assets/{id}.png");
-        fs::write(path.join(&relative), b"PNG test original bytes").unwrap();
-        let mut conn = connect(path).unwrap();
-        conn.execute("INSERT INTO assets(id,original_name,internal_path,preview_path,bytes,mime) VALUES (?1,'photo.png',?2,?2,23,'image/png')",params![id,relative]).unwrap();
-        write_scene(&mut conn, "398", &raw(Some(&id)), None).unwrap();
-        id
-    }
-    #[test]
-    fn roundtrip_restores_media_and_camera_on_another_database() {
-        let source = dir();
-        let original = seed(&source);
-        let archive = source.join("export.atlas");
-        write_archive(&source, &archive, None).unwrap();
-        let target = dir();
-        let staged_dir = target.join("stage");
-        let manifest = stage_archive(&archive, &staged_dir).unwrap();
-        let result = apply_staged(
-            &target,
-            &Staged {
-                dir: staged_dir,
-                manifest,
-            },
-            false,
-        )
-        .unwrap();
-        assert_eq!(result.imported, 1);
-        assert!(Path::new(result.backup.as_ref().unwrap()).is_file());
-        let conn = connect(&target).unwrap();
-        let scene: Value =
-            serde_json::from_str(&read_scene(&conn, "398").unwrap().unwrap()).unwrap();
-        let id = scene["items"][0]["assetId"].as_str().unwrap();
-        assert_ne!(id, original);
-        let relative: String = conn
-            .query_row("SELECT internal_path FROM assets WHERE id=?1", [id], |r| {
-                r.get(0)
-            })
-            .unwrap();
-        assert_eq!(
-            fs::read(target.join(relative)).unwrap(),
-            b"PNG test original bytes"
-        );
-        assert_eq!(scene["camera"]["scale"], 0.8);
-        drop(conn);
-        fs::remove_dir_all(source).unwrap();
-        fs::remove_dir_all(target).unwrap();
-    }
-    #[test]
-    fn existing_countries_are_skipped_unless_replace_is_explicit() {
-        let source = dir();
-        seed(&source);
-        let archive = source.join("export.atlas");
-        write_archive(&source, &archive, None).unwrap();
-        let target = dir();
-        let mut conn = connect(&target).unwrap();
-        let old = raw(None);
-        write_scene(&mut conn, "398", &old, None).unwrap();
-        drop(conn);
-        let stage = target.join("stage");
-        let manifest = stage_archive(&archive, &stage).unwrap();
-        let staged = Staged {
-            dir: stage,
-            manifest,
-        };
-        let skipped = apply_staged(&target, &staged, false).unwrap();
-        assert_eq!(skipped.skipped, 1);
-        assert_eq!(
-            read_scene(&connect(&target).unwrap(), "398")
-                .unwrap()
-                .unwrap(),
-            old
-        );
-        assert_eq!(apply_staged(&target, &staged, true).unwrap().imported, 1);
-        assert!(
-            connect(&target)
-                .unwrap()
-                .query_row("SELECT count(*) FROM scene_revisions", [], |r| r
-                    .get::<_, i64>(0))
-                .unwrap()
-                > 0
-        );
-        fs::remove_dir_all(source).unwrap();
-        fs::remove_dir_all(target).unwrap();
-    }
-    #[test]
-    fn rejects_tampered_media_and_path_traversal_before_restore() {
-        let source = dir();
-        seed(&source);
-        let archive = source.join("export.atlas");
-        write_archive(&source, &archive, None).unwrap();
-        let mut zip = ZipArchive::new(fs::File::open(&archive).unwrap()).unwrap();
-        let bad = source.join("bad.atlas");
-        let mut writer = ZipWriter::new(fs::File::create(&bad).unwrap());
-        for i in 0..zip.len() {
-            let mut f = zip.by_index(i).unwrap();
-            let name = f.name().to_owned();
-            let mut bytes = Vec::new();
-            f.read_to_end(&mut bytes).unwrap();
-            if name.starts_with("assets/") {
-                bytes.push(7);
-            }
-            writer
-                .start_file(name, SimpleFileOptions::default())
-                .unwrap();
-            writer.write_all(&bytes).unwrap();
-        }
-        writer.finish().unwrap();
-        assert!(stage_archive(&bad, &source.join("bad-stage")).is_err());
-        assert!(safe_asset_path(&source, "assets/../../outside").is_err());
-        assert!(safe_asset_path(&source, "assets\\..\\outside").is_err());
-        fs::remove_dir_all(source).unwrap();
-    }
-    #[test]
-    fn automatic_backup_keeps_a_valid_archive_without_repeating_every_save() {
-        let source = dir();
-        seed(&source);
-        automatic_backup(&source).unwrap();
-        automatic_backup(&source).unwrap();
-        let files: Vec<_> = fs::read_dir(source.join("backups")).unwrap().collect();
-        assert_eq!(files.len(), 1);
-        fs::remove_dir_all(source).unwrap();
-    }
-}
-
+#[path = "archive/failure_tests.rs"]
+mod failure_tests;
 #[cfg(test)]
-mod failure_tests {
-    use super::*;
-    #[test]
-    fn failed_restore_rolls_back_metadata_and_removes_new_files() {
-        let source = std::env::temp_dir().join(new_id());
-        let target = std::env::temp_dir().join(new_id());
-        fs::create_dir_all(source.join("assets")).unwrap();
-        fs::create_dir_all(target.join("assets")).unwrap();
-        let id = new_id();
-        let relative = format!("assets/{id}.png");
-        fs::write(source.join(&relative), b"image bytes").unwrap();
-        let base=serde_json::json!({"schemaVersion":3,"camera":{"x":0,"y":0,"scale":1},"theme":{"background":"#ffffff","pattern":"none","fontFamily":"Arial"},"items":[{"id":"a","kind":"image","x":0,"y":0,"assetId":id}]}).to_string();
-        let mut conn = connect(&source).unwrap();
-        conn.execute("INSERT INTO assets(id,original_name,internal_path,preview_path,bytes,mime) VALUES (?1,'test.png',?2,?2,11,'image/png')",params![id,relative]).unwrap();
-        crate::storage::write_scene(&mut conn, "398", &base, None).unwrap();
-        drop(conn);
-        let archive = source.join("export.atlas");
-        write_archive(&source, &archive, None).unwrap();
-        let mut conn = connect(&target).unwrap();
-        let mut old: Value = serde_json::from_str(&base).unwrap();
-        old["items"] = serde_json::json!([]);
-        let old = old.to_string();
-        crate::storage::write_scene(&mut conn, "398", &old, None).unwrap();
-        conn.execute_batch("CREATE TRIGGER reject_restore BEFORE UPDATE ON scenes BEGIN SELECT RAISE(ABORT,'failure'); END;").unwrap();
-        drop(conn);
-        let stage = target.join("staged");
-        let manifest = stage_archive(&archive, &stage).unwrap();
-        assert!(
-            apply_staged(
-                &target,
-                &Staged {
-                    dir: stage,
-                    manifest
-                },
-                true
-            )
-            .is_err()
-        );
-        let conn = connect(&target).unwrap();
-        assert_eq!(
-            crate::storage::read_scene(&conn, "398").unwrap().unwrap(),
-            old
-        );
-        let count: i64 = conn
-            .query_row("SELECT count(*) FROM assets", [], |r| r.get(0))
-            .unwrap();
-        assert_eq!(count, 0);
-        assert_eq!(fs::read_dir(target.join("assets")).unwrap().count(), 0);
-        drop(conn);
-        fs::remove_dir_all(source).unwrap();
-        fs::remove_dir_all(target).unwrap();
-    }
-}
+#[path = "archive/tests.rs"]
+mod tests;

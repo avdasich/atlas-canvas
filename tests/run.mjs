@@ -11,8 +11,20 @@ registerHooks({
     return next(specifier, context);
   },
   load(url, context, next) {
-    if (url.startsWith('file:') && url.endsWith('.ts')) return { format: 'module', source: ts.transpileModule(readFileSync(fileURLToPath(url), 'utf8'), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }).outputText, shortCircuit: true };
-    if (url.startsWith('file:') && url.endsWith('.json')) return { format: 'module', source: `export default ${readFileSync(fileURLToPath(url), 'utf8')}`, shortCircuit: true };
+    if (url.startsWith('file:') && url.endsWith('.ts'))
+      return {
+        format: 'module',
+        source: ts.transpileModule(readFileSync(fileURLToPath(url), 'utf8'), {
+          compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
+        }).outputText,
+        shortCircuit: true,
+      };
+    if (url.startsWith('file:') && url.endsWith('.json'))
+      return {
+        format: 'module',
+        source: `export default ${readFileSync(fileURLToPath(url), 'utf8')}`,
+        shortCircuit: true,
+      };
     return next(url, context);
   },
 });

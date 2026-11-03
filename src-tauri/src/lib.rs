@@ -1,6 +1,11 @@
 mod archive;
+mod images;
 mod media;
+mod operations;
+mod preferences;
+mod revisions;
 mod storage;
+mod validation;
 use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::{Emitter, Manager};
 
@@ -19,6 +24,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .manage(archive::Imports::default())
+        .manage(operations::Operations::default())
         .manage(ExitPermission::default())
         .menu(|app| {
             use tauri::menu::{Menu, MenuItem, MenuItemKind};
@@ -56,13 +62,16 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             storage::load_scene,
+            operations::cancel_operation,
+            preferences::load_preferences,
+            preferences::save_preferences,
             storage::save_scene,
             storage::migrate_scene,
             storage::filled_countries,
-            storage::import_image,
-            storage::read_image_preview,
-            storage::list_revisions,
-            storage::restore_revision,
+            images::import_image,
+            images::read_image_preview,
+            revisions::list_revisions,
+            revisions::restore_revision,
             media::import_url,
             media::save_canvas_export,
             media::list_fonts,

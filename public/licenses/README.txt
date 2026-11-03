@@ -1,0 +1,1 @@
+Third-party software and font notices bundled with Atlas Canvas. Generated from installed npm/Cargo packages. License expressions and available original license/notice files are retained. See fonts/SOURCES.md for unmodified font sources and hashes.

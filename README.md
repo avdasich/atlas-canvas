@@ -6,9 +6,7 @@
 
 [Скачать](https://github.com/avdasich/atlas-canvas/releases) · [Как установить](docs/INSTALLATION.md) · [Руководство](docs/USER_GUIDE.md) · [Горячие клавиши](docs/SHORTCUTS.md)
 
-<!-- Скриншот 01: заполненный холст с фотографиями, заметкой и таблицей. -->
-
-![Пример личного холста в Atlas Canvas](docs/images/01-overview.svg)
+![Пример личного холста в Atlas Canvas](docs/screenshots/editor-snow.png)
 
 ## Что можно делать
 

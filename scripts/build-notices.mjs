@@ -33,14 +33,7 @@ for (const [path, info] of Object.entries(lock.packages)) {
 const metadata = JSON.parse(
   execFileSync(
     'cargo',
-    [
-      'metadata',
-      '--manifest-path',
-      'src-tauri/Cargo.toml',
-      '--locked',
-      '--format-version',
-      '1',
-    ],
+    ['metadata', '--manifest-path', 'src-tauri/Cargo.toml', '--locked', '--format-version', '1'],
     { maxBuffer: 30 * 1024 * 1024, encoding: 'utf8' },
   ),
 );

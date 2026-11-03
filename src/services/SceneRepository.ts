@@ -1,4 +1,4 @@
-import { invoke, isTauri } from '@tauri-apps/api/core';
+import { convertFileSrc, invoke, isTauri } from '@tauri-apps/api/core';
 import type { Country } from '../domain/countries';
 import { emptyScene, parseItems, parseScene, type Scene } from '../domain/scene';
 import { countries } from '../domain/world';
@@ -92,8 +92,7 @@ export class LocalSceneRepository implements SceneRepository {
     } finally { bitmap.close(); }
   }
   async imageUrl(assetId: string) {
-    const bytes = await invoke<number[]>('read_image_preview', { assetId });
-    return URL.createObjectURL(new Blob([new Uint8Array(bytes)], { type: 'image/png' }));
+    return convertFileSrc(await invoke<string>('asset_path', { assetId, preview: true }));
   }
 }
 export const repository: SceneRepository = new LocalSceneRepository(window.localStorage, isTauri());

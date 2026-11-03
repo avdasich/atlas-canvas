@@ -1,8 +1,14 @@
 import type { Camera, CanvasItem } from './scene';
+import { tableSize } from './table';
 export type Bounds = { left: number; top: number; right: number; bottom: number };
 export type Size = { width: number; height: number };
 export type TextSize = (item: CanvasItem) => Size;
 export function dimensions(item: CanvasItem): Size {
+  if (item.kind === 'ellipse') return { width: 130, height: 90 };
+  if (item.kind === 'table' && item.table) return tableSize(item.table);
+  if (item.kind === 'video') return { width: item.width ?? 400, height: item.height ?? 260 };
+  if (item.kind === 'audio') return { width: item.width ?? 360, height: item.height ?? 100 };
+  if (item.kind === 'link') return { width: item.width ?? 320, height: item.height ?? 100 };
   if (item.kind === 'rectangle') return { width: item.width ?? 180, height: item.height ?? 110 };
   if (item.kind === 'square') return { width: item.width ?? 130, height: item.height ?? 130 };
   if (item.kind === 'note') return { width: item.width ?? 300, height: item.height ?? 50 };
@@ -14,8 +20,8 @@ export function itemBounds(item: CanvasItem, measureText?: TextSize): Bounds {
   const a = (item.rotation ?? 0) * Math.PI / 180, cos = Math.cos(a), sin = Math.sin(a);
   let points: number[];
   let pad = 1;
-  if (item.kind === 'circle') {
-    const rx = 65 * sx, ry = 65 * sy;
+  if ((item.kind === 'circle' || item.kind === 'ellipse')) {
+    const rx = 65 * sx, ry = (item.kind === 'ellipse' ? 45 : 65) * sy;
     const dx = Math.hypot(rx * cos, ry * sin), dy = Math.hypot(rx * sin, ry * cos);
     return { left: item.x - dx - Math.hypot(sx * cos, sy * sin), right: item.x + dx + Math.hypot(sx * cos, sy * sin), top: item.y - dy - Math.hypot(sx * sin, sy * cos), bottom: item.y + dy + Math.hypot(sx * sin, sy * cos) };
   } else if (item.kind === 'star') {

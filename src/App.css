@@ -80,3 +80,59 @@ h1 { margin: 10px 0; font-size: 32px; font-weight: 500; letter-spacing: -.8px; }
 .load-screen > div { display: flex; gap: 10px; }
 @media (max-width: 900px) { .pan-hint { display: none; } .properties-panel { width: 200px; padding: 16px 12px; } .map-page { padding: 20px; } .offline-label { display: none; } .map-footer span:last-child { display: none; } }
 @media (max-width: 650px) { .country-toolbar { gap: 4px; padding: 8px; } .country-toolbar button { padding: 7px; font-size: 11px; } .properties-panel { width: 170px; } .country-heading small { display: none; } .map-bar { align-items: stretch; flex-direction: column; } .country-search { width: 100%; } .map-footer span:nth-child(2) { display: none; } }
+.dialog-backdrop { position: fixed; inset: 0; z-index: 1000; background: #0e1c2c88; display: flex; align-items: center; justify-content: center; padding: 24px; }
+.app-dialog { background: #fff; color: #243447; border-radius: 14px; padding: 26px; width: min(640px, 95vw); max-height: 88vh; overflow: auto; box-shadow: 0 22px 65px #0005; font-size: 14px; line-height: 1.5; }
+.app-dialog h2 { margin: 0 0 15px; font-size: 21px; }
+.app-dialog input:not([type=checkbox]):not([type=radio]) { display: block; width: 100%; margin: 6px 0 14px; padding: 10px; border: 1px solid #c9d5de; border-radius: 6px; }
+.dialog-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 18px; }
+.operation-message { overflow-wrap: anywhere; padding: 10px; background: #edf3f7; border-radius: 6px; }
+.archive-countries { max-height: 220px; overflow: auto; padding-left: 18px; font-size: 12px; }
+.revision-list { max-height: 260px; overflow: auto; display: flex; flex-direction: column; gap: 10px; font-size: 12px; }
+.atlas-archive-button { align-self: flex-end; margin-top: -12px; }
+.editor-file-menu { position: relative; flex-shrink: 0; font-size: 13px; }
+.editor-file-menu > summary { padding: 7px; }
+.editor-file-menu > div { position: absolute; right: 0; top: 34px; width: 240px; z-index: 80; display: flex; flex-direction: column; gap: 5px; background: #20323e; padding: 8px; border: 1px solid #486171; border-radius: 7px; }
+.dom-object { position: absolute; transform-origin: top left; background: #fff; border-radius: 6px; color: #243447; box-shadow: 0 2px 8px #0001; overflow: hidden; }
+.dom-object.selected { outline: 2px solid #bf882e; }
+.object-handle { height: 28px; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 5px 9px; font-size: 11px; color: #526775; background: #e8eef3; cursor: move; user-select: none; white-space: nowrap; overflow: hidden; }
+.object-handle span { flex-shrink: 0; }
+.table-clip { overflow: auto; }
+.table-clip table { border-spacing: 0; }
+.table-clip textarea { display: block; width: 100%; border: 0; background: transparent; resize: none; overflow: auto; margin: 0; border-radius: 0; font: inherit; }
+.table-clip textarea:focus { outline: 2px solid #be8b35; outline-offset: -2px; background: #ffffff55; }
+.media-body { height: calc(100% - 28px); display: flex; align-items: center; justify-content: center; padding: 6px; background: #182632; color: #dce8ee; }
+.media-body video { width: 100%; height: 100%; object-fit: contain; }
+.media-body audio { width: 100%; }
+.media-body p { font-size: 12px; padding: 10px; }
+.link-body { padding: 10px; display: flex; align-items: center; gap: 8px; }
+.link-body span { font-size: 11px; flex: 1; overflow: hidden; text-overflow: ellipsis; }
+.link-body button { flex-shrink: 0; font-size: 10px; padding: 5px; }
+.canvas-search { position: absolute; right: 14px; top: 14px; width: min(350px, calc(100% - 28px)); max-height: 60%; z-index: 90; background: #fff; color: #243447; padding: 10px; box-shadow: 0 10px 30px #0003; border: 1px solid #d2dde4; border-radius: 8px; }
+.search-row { display: flex; gap: 6px; }
+.search-row input { width: 100%; min-width: 0; padding: 8px; border: 1px solid #d2dde4; border-radius: 5px; font-size: 12px; }
+.search-results { max-height: 270px; overflow: auto; }
+.search-results button { display: block; width: 100%; background: #f1f5f8; border: 0; color: #243447; text-align: left; margin-top: 5px; font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.search-results small { display: block; font-size: 10px; color: #788c9a; margin-bottom: 4px; }
+.search-results p { font-size: 12px; }
+.text-style-buttons { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 12px; }
+.table-properties { font-size: 12px; border-top: 1px solid #e4e9ed; padding-top: 12px; margin-top: 16px; }
+.table-properties fieldset { border: 1px solid #d9e3e9; padding: 10px; margin: 14px 0; }
+.layers-panel { margin-top: 20px; padding-top: 14px; border-top: 1px solid #e4e9ed; font-size: 12px; }
+.layer-row { display: flex; gap: 3px; margin-top: 5px; }
+.layer-row button:first-child { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.layer-row button:last-child { flex-shrink: 0; padding: 5px; }
+.brush-bar { display: flex; align-items: center; gap: 20px; background: #edf3f7; color: #243447; padding: 6px 16px; font-size: 12px; }
+.brush-bar label { display: flex; align-items: center; gap: 6px; }
+.brush-bar input[type=number] { width: 55px; }
+.brush-bar input[type=color] { width: 35px; height: 25px; border: 0; }
+@media (max-width: 800px) { .country-toolbar { gap: 4px; padding: 6px; } .country-heading strong { max-width: 15vw; font-size: 12px; } .country-toolbar button { font-size: 11px; padding: 7px; } }
+.map-header-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+.theme-presets { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 20px; }
+.theme-presets button { font-size: 10px; padding: 6px; }
+.view-only > .country-toolbar, .view-only .tool-rail, .view-only .properties-panel, .view-only > .editor-status { display: none; }
+.leave-view { position: fixed; top: 14px; right: 14px; z-index: 90; opacity: .8; }
+:root[data-ui-theme=light] { background: #edf2f6; color: #243447; }
+:root[data-ui-theme=light] .map-header p, :root[data-ui-theme=light] .map-footer, :root[data-ui-theme=light] .eyebrow { color: #586e7d; }
+:root[data-ui-theme=light] .country-toolbar, :root[data-ui-theme=light] .tool-rail, :root[data-ui-theme=light] .editor-status { background: #e2eaf0; color: #243447; }
+:root[data-ui-theme=light] .country-heading small { color: #647b8b; }
+.global-notice { position: fixed; left: 10px; right: 10px; bottom: 48px; z-index: 900; background: #ffe4cc; color: #75390a; border: 1px solid #e8a86a; border-radius: 8px; padding: 12px; display: flex; align-items: center; justify-content: space-between; font-size: 13px; }

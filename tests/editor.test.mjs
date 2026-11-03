@@ -127,3 +127,61 @@ test('failed flush retains unsaved state and retry persists it', async () => {
   await assert.rejects(writer.flush()); assert.equal(writer.dirty, true); await writer.flush();
   assert.deepEqual(written, changed); assert.equal(writer.dirty, false);
 });
+
+const { createTable, addRow, addColumn, removeRow, removeColumn, tableSize } = await import('../src/domain/table.ts');
+const { searchItems } = await import('../src/domain/search.ts');
+const { pdfFromJpeg } = await import('../src/domain/pdf.ts');
+const { canvasClipboard } = await import('../src/services/clipboard.ts');
+test('version 2 scenes migrate in memory without mutating the original record', () => {
+  const old = { ...emptyScene(), schemaVersion: 2 }; const raw = JSON.stringify(old); const parsed = parseScene(old);
+  assert.equal(parsed.schemaVersion, 3); assert.equal(JSON.stringify(old), raw);
+});
+test('table structure operations preserve cells, sizes, and editable content', () => {
+  let t = createTable(2, 2); t.cells[0][0].text = 'Население'; t.cells[1][1] = { text: '20 млн', fill: '#ffeeaa', bold: true };
+  t = addColumn(addRow(t)); assert.equal(t.cells.length, 3); assert.equal(t.cells[0].length, 3);
+  assert.equal(t.cells[1][1].text, '20 млн'); t = removeColumn(removeRow(t, 2), 2);
+  assert.deepEqual(tableSize(t), { width: 300, height: 116 });
+  const parsed = parseScene({ ...emptyScene(), items: [{ id: 't', kind: 'table', x: -40, y: 50, table: t }] });
+  assert.equal(parsed.items[0].table.cells[1][1].fill, '#ffeeaa');
+});
+test('malformed tables and unsafe links are rejected before saving', () => {
+  const t = createTable(); t.cells[0].pop();
+  assert.throws(() => parseItems([{ id: 't', kind: 'table', x: 0, y: 0, table: t }]));
+  assert.throws(() => parseItems([{ id: 'l', kind: 'link', x: 0, y: 0, url: 'javascript:alert(1)' }]));
+});
+test('search finds Cyrillic text and table cells including hidden objects', () => {
+  const t = createTable(); t.cells[1][1].text = 'Буддизм';
+  const result = searchItems([{ id: 't', kind: 'table', table: t, x: 0, y: 0, hidden: true }, { id: 'n', kind: 'note', content: 'Буддизм в Японии', x: 5, y: 7 }], 'БУДДИЗМ');
+  assert.equal(result.length, 2); assert.ok(result[0].excerpt.includes('Буддизм')); assert.deepEqual(searchItems([], ' '), []);
+});
+test('cross-canvas clipboard isolates mutations and preserves media references', () => {
+  const source = [{ id: 'photo', kind: 'image', assetId: '00000000-0000-0000-0000-000000000001', x: 1, y: 2 }];
+  canvasClipboard.write(source); source[0].x = 900;
+  const pasted = canvasClipboard.read(); assert.equal(pasted[0].x, 1); assert.equal(pasted[0].assetId, source[0].assetId);
+  pasted[0].y = -50; assert.equal(canvasClipboard.read()[0].y, 2);
+});
+test('PDF byte offsets point to objects even with binary JPEG data', () => {
+  const pdf = pdfFromJpeg(new Uint8Array([255, 216, 255, 0, 128, 255, 217]), 400, 300);
+  const text = new TextDecoder('latin1').decode(pdf); assert.ok(text.startsWith('%PDF-1.4'));
+  const xref = Number(text.match(/startxref\n(\d+)/)[1]); assert.equal(new TextDecoder().decode(pdf.slice(xref, xref + 4)), 'xref');
+  const entries = text.slice(text.indexOf('xref\n')).split('\n').slice(3, 8);
+  entries.forEach((line, i) => { const offset = Number(line.slice(0, 10)); assert.ok(new TextDecoder().decode(pdf.slice(offset, offset + 10)).startsWith(`${i + 1} 0 obj`)); });
+});
+const { installExitGuard, flushBeforeExit } = await import('../src/services/exitGuard.ts');
+test('exit waits for the current input task before draining saves', async () => {
+  let value = 'old', saved;
+  const off = installExitGuard(async () => { saved = value; });
+  const pending = flushBeforeExit(); Promise.resolve().then(() => { value = 'current draft'; });
+  await pending; assert.equal(saved, 'current draft'); off();
+});
+test('an obsolete editor cleanup cannot remove the current exit guard', async () => {
+  let current = false; const old = installExitGuard(async () => {});
+  const off = installExitGuard(async () => { current = true; }); old(); await flushBeforeExit(); assert.equal(current, true); off();
+});
+const { moveOneLayer } = await import('../src/domain/layers.ts');
+test('moving selected layers one step preserves order within the selection', () => {
+  const list = ['a','b','c','d','e'].map(id => circle(id));
+  assert.deepEqual(moveOneLayer(list, ['b','c'], 1).map(i => i.id), ['a','d','b','c','e']);
+  assert.deepEqual(moveOneLayer(list, ['b','c'], -1).map(i => i.id), ['b','c','a','d','e']);
+  assert.deepEqual(list.map(i => i.id), ['a','b','c','d','e']);
+});

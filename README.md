@@ -59,6 +59,14 @@
 
 Приложение развивается. Возможности описаны для версии 0.3; более старые выпуски могут отличаться. Видео и аудио воспроизводятся в зависимости от поддержки формата вашей системой.
 
+## Лицензия
+
+Atlas Canvas распространяется под лицензией [MIT](LICENSE).
+
+- Карта: данные [Natural Earth](https://www.naturalearthdata.com/about/terms-of-use/) в общественном достоянии, поставляются через пакет [world-atlas](https://github.com/topojson/world-atlas).
+- Шрифты Noto Sans и Noto Serif: [SIL Open Font License 1.1](public/fonts/NotoSans-OFL.txt).
+- Лицензии и уведомления сторонних компонентов находятся в [public/licenses](public/licenses) и доступны в приложении через **О программе и лицензии**.
+
 <details>
 <summary>Для разработчиков и автора проекта</summary>
 

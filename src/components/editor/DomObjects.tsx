@@ -1,9 +1,12 @@
 import { convertFileSrc, invoke, isTauri } from '@tauri-apps/api/core';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { useEffect, useRef, useState } from 'react';
+import type { DisclosureSection } from '../../domain/disclosure';
+import type { SectionDraft } from '../../domain/drafts';
 import { dimensions } from '../../domain/geometry';
 import type { Camera, CanvasItem, TableData } from '../../domain/scene';
 import { coveredCell, mergeAt } from '../../domain/table';
+import DisclosureCard from './DisclosureCard';
 export type CellSelection = { row: number; column: number };
 type Props = {
   item: CanvasItem;
@@ -16,6 +19,8 @@ type Props = {
   onSelect: (extend?: boolean) => void;
   onDrag: (event: ReactPointerEvent) => void;
   onTable: (table: TableData) => void;
+  onSectionChange: (sectionId: string, patch: Partial<DisclosureSection>) => void;
+  onSectionDraft: (draft: SectionDraft | null) => void;
   onCell: (cell: CellSelection) => void;
   onDraft: (draft: { id: string; row: number; column: number; text: string } | null) => void;
 };
@@ -81,6 +86,8 @@ export default function DomObject({
   onSelect,
   onDrag,
   onTable,
+  onSectionChange,
+  onSectionDraft,
   onCell,
   onDraft,
 }: Props) {
@@ -109,10 +116,11 @@ export default function DomObject({
       data-object-id={item.id}
       style={{
         zIndex,
+        fontFamily: item.fontFamily ?? fontFamily,
         left: camera.x + item.x * camera.scale,
         top: camera.y + item.y * camera.scale,
         width: size.width,
-        height: size.height,
+        height: item.kind === 'disclosure' ? 'auto' : size.height,
         opacity: item.opacity ?? 1,
         boxShadow: item.shadowBlur ? `0 0 ${item.shadowBlur}px #0005` : 'none',
         transform: `rotate(${item.rotation ?? 0}deg) scale(${camera.scale * (item.scaleX ?? 1)},${camera.scale * (item.scaleY ?? 1)})`,
@@ -142,9 +150,21 @@ export default function DomObject({
               ? 'Видео'
               : item.kind === 'audio'
                 ? 'Аудио'
-                : 'Ссылка')}
+                : item.kind === 'disclosure'
+                  ? 'Сноски'
+                  : 'Ссылка')}
         <span>{item.locked ? '🔒' : '⠿'}</span>
       </div>
+      {item.kind === 'disclosure' && item.sections && (
+        <DisclosureCard
+          itemId={item.id}
+          sections={item.sections}
+          readOnly={readOnly || !!item.locked}
+          onSelect={() => onSelect()}
+          onChange={onSectionChange}
+          onDraft={onSectionDraft}
+        />
+      )}
       {item.kind === 'table' && item.table && (
         <div
           className="table-clip"

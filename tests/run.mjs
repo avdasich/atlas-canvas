@@ -29,3 +29,5 @@ registerHooks({
   },
 });
 await import('./editor.test.mjs');
+
+await import('./object-features.test.mjs');

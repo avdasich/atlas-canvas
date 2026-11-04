@@ -1,5 +1,4 @@
 import { invoke, isTauri } from '@tauri-apps/api/core';
-import Konva from 'konva';
 import type { ShapeConfig } from 'konva/lib/Shape';
 import { memo, useEffect, useState } from 'react';
 import {
@@ -13,45 +12,13 @@ import {
   Star,
   Text,
 } from 'react-konva';
+import { sourceCrop } from '../../domain/crop';
 import { dimensions } from '../../domain/geometry';
-import { layoutRichText, type RichRun } from '../../domain/richText';
 import type { CanvasItem } from '../../domain/scene';
 import { repository } from '../../services/SceneRepository';
+import { richLayout, textConfig } from '../../services/textLayout';
 
-export function textConfig(item: CanvasItem, family = 'Arial') {
-  return {
-    text: item.content ?? '',
-    fontSize: item.fontSize ?? 26,
-    fontFamily: item.fontFamily ?? family,
-    fontStyle: item.fontStyle ?? 'normal',
-    textDecoration: item.textDecoration ?? '',
-    align: item.align ?? 'left',
-    width: item.width ?? 300,
-    lineHeight: item.lineHeight ?? 1.3,
-    padding: 0,
-  };
-}
-export function richLayout(item: CanvasItem, family: string) {
-  const config = textConfig(item, family);
-  return layoutRichText(
-    item.richText ?? [{ text: item.content ?? '' }],
-    config.width,
-    config.fontSize,
-    config.lineHeight,
-    item.align ?? 'left',
-    (text: string, run: RichRun) => {
-      const n = new Konva.Text({
-        ...config,
-        width: undefined,
-        text,
-        fontStyle: `${run.bold || item.fontStyle?.includes('bold') ? 'bold' : ''} ${run.italic || item.fontStyle?.includes('italic') ? 'italic' : ''}`,
-      });
-      const width = n.width();
-      n.destroy();
-      return width;
-    },
-  );
-}
+export { richLayout, textConfig } from '../../services/textLayout';
 function StoredImage({ item, common }: { item: CanvasItem; common: ShapeConfig }) {
   const [image, setImage] = useState<HTMLImageElement>();
   const [error, setError] = useState(false);
@@ -88,7 +55,13 @@ function StoredImage({ item, common }: { item: CanvasItem; common: ShapeConfig }
   const size = dimensions(item);
   return (
     <>
-      <CanvasImage {...common} {...size} image={image} fill={image ? undefined : '#e7eef2'} />
+      <CanvasImage
+        {...common}
+        {...size}
+        image={image}
+        crop={image ? sourceCrop(item.crop, image.naturalWidth, image.naturalHeight) : undefined}
+        fill={image ? undefined : '#e7eef2'}
+      />
       {!image && (
         <Text
           {...common}
@@ -118,7 +91,7 @@ function ItemViewComponent({
   textColor?: string;
   interaction?: unknown;
 }) {
-  if (['table', 'video', 'audio', 'link'].includes(item.kind))
+  if (['table', 'video', 'audio', 'link', 'disclosure'].includes(item.kind))
     return <Rect {...common} {...dimensions(item)} fill="#ffffff" opacity={0} />;
   if (item.kind === 'ellipse')
     return (

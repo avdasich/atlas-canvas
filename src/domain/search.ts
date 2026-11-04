@@ -4,6 +4,7 @@ export function itemText(item: CanvasItem): string {
     item.title,
     item.content,
     item.url,
+    ...(item.sections?.flatMap((section) => [section.title, section.content]) ?? []),
     ...(item.table?.cells.flatMap((row) => row.map((c) => c.text)) ?? []),
   ]
     .filter(Boolean)
@@ -20,6 +21,9 @@ export function searchItems(items: CanvasItem[], query: string) {
       : [
           {
             item,
+            sectionId: item.sections?.find((s) =>
+              `${s.title}\n${s.content}`.toLocaleLowerCase('ru').includes(needle),
+            )?.id,
             excerpt: `${index > 35 ? '…' : ''}${text.slice(Math.max(0, index - 35), index + needle.length + 80)}`,
           },
         ];

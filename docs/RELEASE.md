@@ -9,9 +9,9 @@
 
 Экспортируйте полный `.atlas` в текущей программе. У основной сборки сохраняйте identifier `com.m1.tauri-app`: тогда она откроет прежнюю базу и вложения. Тестовые QA-приложения с другими identifier имеют отдельные данные. Если заметки находятся в **Atlas Canvas QA 03**, сначала экспортируйте их именно оттуда, затем импортируйте в основную версию. Не переносите только файл SQLite без `assets/`.
 
-0.3 сохраняет сцены формата 4. Программа 0.2 их отвергает. Чтобы вернуться к 0.2, нужен архив, экспортированный до обновления, или отдельная нетронутая копия её данных.
+0.4 сохраняет сцены формата 5. Версии 0.2 и 0.3 их отвергают. Чтобы вернуться к старой версии, нужен архив, экспортированный до обновления, или отдельная нетронутая копия её данных.
 
-## Проверить и загрузить 0.3.0 на GitHub
+## Проверить и загрузить 0.4.0 на GitHub
 
 Команды ниже предназначены для уже существующего репозитория. Сначала просмотрите diff: в commit попадут исходники, документация и поставляемые шрифты/уведомления, а не ваши личные холсты.
 
@@ -30,20 +30,22 @@ git diff --check
 
 git add .
 git diff --cached --stat
-git commit -m "Release 0.3.0: snow shimmer, editor tools, shortcuts and documentation"
-git push origin main
+git commit -m "Add image cropping, disclosures and object materials"
+git push -u origin feature/crop-disclosures-materials
 ```
 
-На `main` запустится **Platform builds**, который проверяет сборку macOS, Windows и Linux. Сначала дождитесь зелёного результата в [Actions](https://github.com/avdasich/atlas-canvas/actions). Эти результаты появятся только после вашего push; локальная проверка macOS не означает, что Windows/Linux уже прошли.
+Откройте Pull Request из `feature/crop-disclosures-materials` в `main`. На нём запустится **Platform builds**, который проверяет сборку macOS, Windows и Linux. Сначала дождитесь зелёного результата в [Actions](https://github.com/avdasich/atlas-canvas/actions). Эти результаты появятся только после вашего push; локальная проверка macOS не означает, что Windows/Linux уже прошли.
 
-Затем создайте новый тег:
+После зелёных проверок скачайте пакеты из Artifacts, проверьте их вручную и слейте PR. Затем создайте новый тег на обновлённой `main`:
 
 ```sh
-git tag v0.3.0
-git push origin v0.3.0
+git switch main
+git pull --ff-only origin main
+git tag v0.4.0
+git push origin v0.4.0
 ```
 
-Не используйте повторно `v0.2.0`. Если `v0.3.0` уже существует, не перезаписывайте его силой: выберите следующую версию и согласованно обновите `package.json`, `package-lock.json`, `src-tauri/Cargo.toml`, `src-tauri/Cargo.lock` и `src-tauri/tauri.conf.json`.
+Не используйте повторно `v0.2.0`. Если `v0.4.0` уже существует, не перезаписывайте его силой: выберите следующую версию и согласованно обновите `package.json`, `package-lock.json`, `src-tauri/Cargo.toml`, `src-tauri/Cargo.lock` и `src-tauri/tauri.conf.json`.
 
 ## Когда появится Windows installer
 
@@ -53,8 +55,8 @@ Workflow проверяет соответствие тега версии пр�
 
 После успешной сборки:
 
-1. Откройте [Releases](https://github.com/avdasich/atlas-canvas/releases), найдите draft для `v0.3.0` и нажмите редактирование.
-2. Убедитесь, что тег именно `v0.3.0`, прикреплён `-setup.exe`, название и описание соответствуют версии.
+1. Откройте [Releases](https://github.com/avdasich/atlas-canvas/releases), найдите draft для `v0.4.0` и нажмите редактирование.
+2. Убедитесь, что тег именно `v0.4.0`, прикреплён `-setup.exe`, название и описание соответствуют версии.
 3. Скачайте установщик и проверьте его на Windows.
 4. Нажмите **Publish release**. Для предварительной версии оставьте отметку prerelease.
 5. Откройте публичную страницу без входа и дайте пользователю ссылку на опубликованный релиз.

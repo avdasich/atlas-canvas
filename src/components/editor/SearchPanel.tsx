@@ -7,7 +7,7 @@ export default function SearchPanel({
   onClose,
 }: {
   items: CanvasItem[];
-  onChoose: (item: CanvasItem) => void;
+  onChoose: (item: CanvasItem, sectionId?: string) => void;
   onClose: () => void;
 }) {
   const [query, setQuery] = useState('');
@@ -19,12 +19,12 @@ export default function SearchPanel({
           autoFocus
           aria-label="Поиск по записям"
           value={query}
-          placeholder="Текст, таблицы и ссылки…"
+          placeholder="Заметки, таблицы, сноски и ссылки…"
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => {
             e.stopPropagation();
             if (e.key === 'Escape') onClose();
-            if (e.key === 'Enter' && results[0]) onChoose(results[0].item);
+            if (e.key === 'Enter' && results[0]) onChoose(results[0].item, results[0].sectionId);
           }}
         />
         <button aria-label="Закрыть поиск" onClick={onClose}>
@@ -32,10 +32,16 @@ export default function SearchPanel({
         </button>
       </div>
       <div className="search-results">
-        {results.map(({ item, excerpt }) => (
-          <button key={item.id} onClick={() => onChoose(item)}>
+        {results.map(({ item, excerpt, sectionId }) => (
+          <button key={item.id} onClick={() => onChoose(item, sectionId)}>
             <small>
-              {item.kind === 'table' ? 'Таблица' : item.kind === 'note' ? 'Заметка' : 'Объект'}
+              {item.kind === 'table'
+                ? 'Таблица'
+                : item.kind === 'note'
+                  ? 'Заметка'
+                  : item.kind === 'disclosure'
+                    ? 'Сноски'
+                    : 'Объект'}
               {item.hidden ? ' · скрыт' : ''}
             </small>
             {excerpt}

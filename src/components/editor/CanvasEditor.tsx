@@ -3,6 +3,9 @@ import Konva from 'konva';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Country } from '../../domain/countries';
+import { applyImageCrop, fullImage } from '../../domain/crop';
+import { createSection } from '../../domain/disclosure';
+import { applyContentDrafts, type SectionDraft } from '../../domain/drafts';
 import {
   arrangeItems,
   dimensions,
@@ -14,6 +17,7 @@ import {
   type Bounds,
 } from '../../domain/geometry';
 import { moveOneLayer } from '../../domain/layers';
+import { hasMaterial } from '../../domain/materials';
 import type { RichRun } from '../../domain/richText';
 import {
   validUrl,
@@ -44,8 +48,10 @@ import CanvasNavigator from './CanvasNavigator';
 import DomObject, { type CellSelection } from './DomObjects';
 import EditorToolbar, { type ToolbarMenuItem } from './EditorToolbar';
 import { shapeLabels, type EditorTool } from './editorTools';
+import ImageCropDialog from './ImageCropDialog';
 import { ItemView, richLayout, textConfig } from './ItemView';
 import LinkDialog from './LinkDialog';
+import ObjectMaterial from './ObjectMaterial';
 import PropertiesPanel from './PropertiesPanel';
 import RevisionsPanel from './RevisionsPanel';
 import RichTextEditor from './RichTextEditor';
@@ -78,6 +84,8 @@ export default function CanvasEditor({
   const [archiveOpen, setArchiveOpen] = useState(false),
     [revisionsOpen, setRevisionsOpen] = useState(false),
     [searchOpen, setSearchOpen] = useState(false);
+  const [croppingId, setCroppingId] = useState<string | null>(null);
+  const [sectionDraft, setSectionDraft] = useState<SectionDraft | null>(null);
   const [cell, setCell] = useState<CellSelection | null>(null);
   const [tableDraft, setTableDraft] = useState<{
     id: string;
@@ -175,12 +183,39 @@ export default function CanvasEditor({
     return size;
   };
   const bounds = (item: CanvasItem) => itemBounds(item, measureText);
+  // Read-only sections may expand locally without changing the stored geometry.
+  const domBounds = (item: CanvasItem) =>
+    bounds(
+      item.kind === 'disclosure' && (viewOnly || item.locked)
+        ? { ...item, sections: item.sections?.map((s) => ({ ...s, collapsed: false })) }
+        : item,
+    );
   const viewport = (): Bounds => ({
     left: -camera.x / camera.scale,
     top: -camera.y / camera.scale,
     right: (size.width - camera.x) / camera.scale,
     bottom: (size.height - camera.y) / camera.scale,
   });
+  // Glass panels float over the scene; keep new objects and Fit in the free area.
+  const frame = {
+    left: theme.glassPanels && !viewOnly ? 78 : 0,
+    right:
+      theme.glassPanels && !viewOnly && showProperties && size.width > 650
+        ? Math.min(272, Math.max(180, size.width * 0.28)) + 20
+        : 0,
+  };
+  const usableViewport = (): Bounds => ({
+    ...viewport(),
+    left: (frame.left - camera.x) / camera.scale,
+    right: (size.width - frame.right - camera.x) / camera.scale,
+  });
+  const fitInEditor = (list: Bounds[]) => {
+    const next = fitCamera(list, {
+      width: Math.max(1, size.width - frame.left - frame.right),
+      height: size.height,
+    });
+    return { ...next, x: next.x + frame.left };
+  };
   const change = (fn: (composition: Composition) => Composition) =>
     setHistory((h) => {
       const next = fn(h.present);
@@ -198,7 +233,7 @@ export default function CanvasEditor({
   const setTheme = (next: Theme) => change((c) => ({ ...c, theme: next }));
   const showAll = (list = items) => {
     lastCamera.current = camera;
-    setCamera(fitCamera(list.filter((i) => !i.hidden).map(bounds), size));
+    setCamera(fitInEditor(list.filter((i) => !i.hidden).map(bounds)));
   };
   const performUndo = () => {
     setHistory(undo);
@@ -212,36 +247,19 @@ export default function CanvasEditor({
   };
 
   useLayoutEffect(() => {
-    let currentItems = editing
-      ? history.present.items.map((i) =>
-          i.id === editing.id ? { ...i, content: editing.draft, richText: editing.richText } : i,
-        )
-      : history.present.items;
-    if (tableDraft)
-      currentItems = currentItems.map((i) =>
-        i.id === tableDraft.id && i.table
-          ? {
-              ...i,
-              table: {
-                ...i.table,
-                cells: i.table.cells.map((row, r) =>
-                  row.map((c, col) =>
-                    r === tableDraft.row && col === tableDraft.column
-                      ? { ...c, text: tableDraft.text }
-                      : c,
-                  ),
-                ),
-              },
-            }
-          : i,
-      );
+    const currentItems = applyContentDrafts(
+      history.present.items,
+      editing,
+      tableDraft,
+      sectionDraft,
+    );
     storage.schedule({
-      schemaVersion: 4,
+      schemaVersion: 5,
       items: currentItems,
       theme: history.present.theme,
       camera,
     });
-  }, [history.present, camera, editing, tableDraft, storage.schedule]);
+  }, [history.present, camera, editing, tableDraft, sectionDraft, storage.schedule]);
   useEffect(() => {
     const observer = new ResizeObserver(([entry]) =>
       setSize({
@@ -274,9 +292,9 @@ export default function CanvasEditor({
   }
   function reveal(item: CanvasItem) {
     const b = bounds(item),
-      view = viewport();
+      view = usableViewport();
     if (b.left < view.left || b.top < view.top || b.right > view.right || b.bottom > view.bottom)
-      setCamera(fitCamera([b], size));
+      setCamera(fitInEditor([b]));
   }
   function add(kind: ItemKind, table?: ReturnType<typeof createTable>) {
     if (shapeLabels.some(([value]) => value === kind) && theme.drawShapes) {
@@ -288,13 +306,17 @@ export default function CanvasEditor({
     }
     const item: CanvasItem = { id: crypto.randomUUID(), kind, x: 0, y: 0 };
     if (kind === 'table') item.table = table ?? createTable();
+    if (kind === 'disclosure') {
+      item.title = 'Сноски';
+      item.sections = [createSection('Подробнее'), createSection('Источники')];
+    }
     if (kind === 'note') {
       item.content = 'Новая заметка';
       item.fontSize = 28;
       item.fill = theme.textColor ?? '#243447';
     }
     if (kind === 'arrow' || kind === 'line') item.points = [0, 0, 160, 0];
-    const placed = placeItem(item, items, viewport(), measureText);
+    const placed = placeItem(item, items, usableViewport(), measureText);
     changeItems((list) => [...list, placed]);
     setSelected([placed.id]);
     setCell(null);
@@ -328,7 +350,7 @@ export default function CanvasEditor({
           hidden: false,
         },
         next,
-        viewport(),
+        usableViewport(),
         measureText,
       );
       next.push(placed);
@@ -352,7 +374,7 @@ export default function CanvasEditor({
       setMessage('Снимите блокировку объектов перед общей раскладкой.');
       return;
     }
-    const next = arrangeItems(items, viewport(), measureText);
+    const next = arrangeItems(items, usableViewport(), measureText);
     changeItems(() => next);
     showAll(next);
     setMenu(null);
@@ -369,12 +391,8 @@ export default function CanvasEditor({
   }
   async function back() {
     setBusy(true);
-    const currentItems = editing
-      ? items.map((i) =>
-          i.id === editing.id ? { ...i, content: editing.draft, richText: editing.richText } : i,
-        )
-      : items;
-    storage.schedule({ schemaVersion: 4, items: currentItems, theme, camera });
+    const currentItems = applyContentDrafts(items, editing, tableDraft, sectionDraft);
+    storage.schedule({ schemaVersion: 5, items: currentItems, theme, camera });
     try {
       await storage.flush();
       onBack();
@@ -402,7 +420,7 @@ export default function CanvasEditor({
   } = useCanvasTransfers({
     items,
     theme,
-    viewport,
+    viewport: usableViewport,
     measureText,
     changeItems,
     setSelected: (ids) => {
@@ -479,7 +497,8 @@ export default function CanvasEditor({
       setTool,
     });
   useEditorShortcuts({
-    blocked: busy || archiveOpen || revisionsOpen || linkOpen || tableCreator || aboutOpen,
+    blocked:
+      busy || archiveOpen || revisionsOpen || linkOpen || tableCreator || aboutOpen || !!croppingId,
     editing: !!editing,
     viewOnly,
     space: setSpaceHeld,
@@ -658,6 +677,10 @@ export default function CanvasEditor({
         !busy,
       onMouseDown: (e: Konva.KonvaEventObject<MouseEvent>) => {
         if (e.evt.button !== 0 || spaceHeld) return;
+        // End property input before taking a canvas gesture; keyboard actions
+        // must not remain focused in the last checkbox or numeric field.
+        if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+        e.evt.preventDefault();
         if (tool === 'eraser') {
           if (!item.locked && item.kind === 'stroke')
             changeItems((list) => list.filter((i) => i.id !== item.id));
@@ -703,7 +726,7 @@ export default function CanvasEditor({
         key={`${item.id}-${item.kind === 'note' ? `${fontLibrary.loadedAt}-${fontLibrary.fonts.length}` : ''}`}
         textColor={theme.textColor ?? '#243447'}
         item={item}
-        common={common}
+        common={hasMaterial(item) ? { ...common, opacity: 0 } : common}
         fontFamily={theme.fontFamily}
       />
     );
@@ -728,7 +751,7 @@ export default function CanvasEditor({
         y: 0,
       },
       items,
-      viewport(),
+      usableViewport(),
       measureText,
     );
     changeItems((list) => [...list, item]);
@@ -740,7 +763,7 @@ export default function CanvasEditor({
     { label: 'О программе и лицензии', onClick: () => setAboutOpen(true) },
     {
       label: 'Показать выделенное',
-      onClick: () => setCamera(fitCamera(selectedItems.map(bounds), size)),
+      onClick: () => setCamera(fitInEditor(selectedItems.map(bounds))),
       disabled: !selectedItems.length,
     },
     { label: 'Предыдущий вид', onClick: () => setCamera(lastCamera.current) },
@@ -755,7 +778,7 @@ export default function CanvasEditor({
       onClick: async () => {
         try {
           const result = await exportCanvas(
-            { schemaVersion: 4, items: selectedItems, theme, camera },
+            { schemaVersion: 5, items: selectedItems, theme, camera },
             viewport(),
             'all',
             'png',
@@ -781,7 +804,10 @@ export default function CanvasEditor({
     { label: 'Вставить объекты', onClick: () => duplicate(canvasClipboard.read()) },
   ];
   return (
-    <main aria-busy={busy} className={`country-workspace ${viewOnly ? 'view-only' : ''}`}>
+    <main
+      aria-busy={busy}
+      className={`country-workspace ${viewOnly ? 'view-only' : ''} ${theme.glassPanels ? 'glass-panels' : ''}`}
+    >
       {viewOnly && (
         <button className="leave-view" onClick={() => setViewOnly(false)}>
           Вернуться к редактированию · Esc
@@ -957,9 +983,25 @@ export default function CanvasEditor({
           {displayedItems
             .filter(
               (i) =>
+                !i.hidden && hasMaterial(i) && overlaps(bounds(i), viewport(), 200 / camera.scale),
+            )
+            .map((item) => (
+              <ObjectMaterial
+                key={item.id}
+                item={item}
+                camera={camera}
+                fontFamily={theme.fontFamily}
+                textColor={theme.textColor ?? '#243447'}
+                fontRevision={fontLibrary.loadedAt}
+                zIndex={displayedItems.findIndex((i) => i.id === item.id) * 2 + 2}
+              />
+            ))}
+          {displayedItems
+            .filter(
+              (i) =>
                 !i.hidden &&
-                ['table', 'video', 'audio', 'link'].includes(i.kind) &&
-                overlaps(bounds(i), viewport(), 200 / camera.scale),
+                ['table', 'video', 'audio', 'link', 'disclosure'].includes(i.kind) &&
+                overlaps(domBounds(i), viewport(), 200 / camera.scale),
             )
             .map((item) => (
               <DomObject
@@ -970,7 +1012,7 @@ export default function CanvasEditor({
                 item={item}
                 camera={camera}
                 selected={selected.includes(item.id)}
-                interactive={tool === 'select' && !spaceHeld && !busy}
+                interactive={viewOnly || (tool === 'select' && !spaceHeld && !busy)}
                 onSelect={(extend = false) =>
                   !viewOnly && setSelected((ids) => selectItem(items, ids, item, extend))
                 }
@@ -979,6 +1021,21 @@ export default function CanvasEditor({
                 }}
                 onCell={setCell}
                 onDraft={setTableDraft}
+                onSectionDraft={setSectionDraft}
+                onSectionChange={(sectionId, patch) =>
+                  changeItems((list) =>
+                    list.map((i) =>
+                      i.id === item.id
+                        ? {
+                            ...i,
+                            sections: i.sections?.map((section) =>
+                              section.id === sectionId ? { ...section, ...patch } : section,
+                            ),
+                          }
+                        : i,
+                    ),
+                  )
+                }
                 onTable={(table) =>
                   changeItems((list) => list.map((i) => (i.id === item.id ? { ...i, table } : i)))
                 }
@@ -999,13 +1056,22 @@ export default function CanvasEditor({
             <SearchPanel
               items={items}
               onClose={() => setSearchOpen(false)}
-              onChoose={(item) => {
-                if (item.hidden)
-                  changeItems((list) =>
-                    list.map((i) => (i.id === item.id ? { ...i, hidden: false } : i)),
-                  );
+              onChoose={(item, sectionId) => {
+                const revealed = {
+                  ...item,
+                  hidden: false,
+                  ...(sectionId
+                    ? {
+                        sections: item.sections?.map((s) =>
+                          s.id === sectionId ? { ...s, collapsed: false } : s,
+                        ),
+                      }
+                    : {}),
+                };
+                if (item.hidden || sectionId)
+                  changeItems((list) => list.map((i) => (i.id === item.id ? revealed : i)));
                 setSelected([item.id]);
-                setCamera(fitCamera([bounds(item)], size));
+                setCamera(fitInEditor([bounds(revealed)]));
               }}
             />
           )}
@@ -1076,6 +1142,12 @@ export default function CanvasEditor({
         {showProperties && (
           <PropertiesPanel
             onReplace={(item, file) => void replaceAsset(item, file)}
+            onCrop={(item) => setCroppingId(item.id)}
+            onResetCrop={(item) =>
+              changeItems((list) =>
+                list.map((i) => (i.id === item.id ? applyImageCrop(i, fullImage) : i)),
+              )
+            }
             items={items}
             cell={cell}
             fontOptions={fontLibrary.fonts}
@@ -1137,6 +1209,18 @@ export default function CanvasEditor({
           setTableCreator(false);
         }}
       />
+      {croppingId && items.find((i) => i.id === croppingId)?.kind === 'image' && (
+        <ImageCropDialog
+          item={items.find((i) => i.id === croppingId)!}
+          onClose={() => setCroppingId(null)}
+          onApply={(crop) => {
+            changeItems((list) =>
+              list.map((i) => (i.id === croppingId ? applyImageCrop(i, crop) : i)),
+            );
+            setCroppingId(null);
+          }}
+        />
+      )}
       {linkOpen && (
         <LinkDialog
           linkKind={linkKind}

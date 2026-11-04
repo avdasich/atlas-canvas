@@ -1,11 +1,16 @@
 import { convertFileSrc, invoke, isTauri } from '@tauri-apps/api/core';
 import Konva from 'konva';
-import { richLayout, textConfig } from '../components/editor/ItemView';
+import { sourceCrop } from '../domain/crop';
+import { disclosureHeader } from '../domain/disclosure';
 import { type Bounds, dimensions, itemBounds, union } from '../domain/geometry';
+import { hasMaterial, supportsMaterial } from '../domain/materials';
 import { pdfFromJpeg, pdfFromJpegs } from '../domain/pdf';
 import type { CanvasItem, Scene } from '../domain/scene';
 import { drawShimmer, snowCrystals } from '../domain/shimmer';
 import { coveredCell, mergeAt } from '../domain/table';
+import { exportedMaterial, materialRaster } from './materialRaster';
+import { richLayout, textConfig } from './textLayout';
+import { vectorNode } from './vectorDrawing';
 async function image(url: string) {
   return new Promise<HTMLImageElement>((resolve, reject) => {
     const img = new Image();
@@ -23,6 +28,7 @@ export async function exportCanvas(
 ) {
   if (!isTauri()) throw new Error('Сохранение PNG/PDF доступно в настольном приложении.');
   const measure = (i: CanvasItem) => {
+    if (i.richText) return richLayout(i, scene.theme.fontFamily);
     const n = new Konva.Text(textConfig(i, scene.theme.fontFamily));
     const size = { width: n.width(), height: n.height() };
     n.destroy();
@@ -181,98 +187,112 @@ export async function exportCanvas(
         shadowBlur: item.shadowBlur ?? 0,
       });
       world.add(group);
-      const size = dimensions(item),
-        style = {
-          fill: item.fill ?? '#a7d7df',
-          stroke: item.stroke ?? '#578b9a',
-          strokeWidth: item.strokeWidth ?? 2,
-        };
-      if (item.kind === 'note' && (item.richText || item.textBackground)) {
-        const rich = richLayout(item, scene.theme.fontFamily);
-        if (item.textBackground)
-          group.add(
-            new Konva.Rect({ width: rich.width, height: rich.height, fill: item.textBackground }),
+      const size = dimensions(item);
+      if (supportsMaterial(item)) {
+        if (hasMaterial(item)) {
+          if (item.glass?.enabled && item.kind === 'note' && item.textBackground) {
+            const layout = richLayout(item, scene.theme.fontFamily);
+            group.add(
+              new Konva.Rect({
+                width: layout.width,
+                height: layout.height,
+                fill: item.textBackground,
+              }),
+            );
+          }
+          layer.draw();
+          const raster = materialRaster(
+            item,
+            scene.theme.fontFamily,
+            scene.theme.textColor ?? '#243447',
+            2,
+            (item.glass?.blur ?? 0) * 2 + 3,
           );
-        for (const part of rich.segments)
+          const texture = exportedMaterial(
+            raster,
+            item,
+            stage.toCanvas({ pixelRatio: 1 }),
+            group.getAbsoluteTransform(),
+          );
           group.add(
-            new Konva.Text({
-              x: part.x,
-              y: part.y,
-              text: part.text,
-              fontSize: item.fontSize ?? 26,
-              fontFamily: item.fontFamily ?? scene.theme.fontFamily,
-              fontStyle: `${part.bold || item.fontStyle?.includes('bold') ? 'bold' : ''} ${part.italic || item.fontStyle?.includes('italic') ? 'italic' : ''}`,
-              textDecoration: part.underline || part.href ? 'underline' : item.textDecoration,
-              fill: part.href ? '#397bc7' : (item.fill ?? '#243447'),
+            new Konva.Image({
+              image: texture,
+              x: raster.left,
+              y: raster.top,
+              width: raster.width,
+              height: raster.height,
             }),
           );
-      } else if (item.kind === 'note')
-        group.add(
-          new Konva.Text({
-            ...textConfig(item, scene.theme.fontFamily),
-            fill: item.fill ?? scene.theme.textColor ?? '#243447',
-          }),
-        );
-      else if (['rectangle', 'square'].includes(item.kind))
-        group.add(
-          new Konva.Rect({
-            ...size,
-            offsetX: size.width / 2,
-            offsetY: size.height / 2,
-            cornerRadius: item.cornerRadius ?? 8,
-            ...style,
-          }),
-        );
-      else if (item.kind === 'circle' || item.kind === 'ellipse')
-        group.add(
-          new Konva.Ellipse({
-            radiusX: 65,
-            radiusY: item.kind === 'ellipse' ? 45 : 65,
-            ...style,
-            fill: item.fill ?? '#f3c2b2',
-          }),
-        );
-      else if (item.kind === 'star')
-        group.add(
-          new Konva.Star({
-            numPoints: 5,
-            innerRadius: 30,
-            outerRadius: 65,
-            ...style,
-            fill: item.fill ?? '#f1d587',
-          }),
-        );
-      else if (item.kind === 'arrow')
-        group.add(
-          new Konva.Arrow({
-            points: item.points ?? [],
-            stroke: item.stroke ?? '#365b77',
-            fill: item.stroke ?? '#365b77',
-            strokeWidth: item.strokeWidth ?? 4,
-            pointerLength: 14,
-            pointerWidth: 14,
-            pointerAtBeginning: item.arrowStart ?? false,
-            pointerAtEnding: item.arrowEnd ?? true,
-            dash: item.dash,
-          }),
-        );
-      else if (item.points)
-        group.add(
-          new Konva.Line({
-            points: item.points,
-            stroke: item.stroke ?? '#365b77',
-            strokeWidth: item.strokeWidth ?? 3,
-            lineCap: 'round',
-            lineJoin: 'round',
-            tension: item.tension ?? 0,
-            dash: item.dash,
-          }),
-        );
-      else if (item.kind === 'image') {
+        } else
+          group.add(vectorNode(item, scene.theme.fontFamily, scene.theme.textColor ?? '#243447'));
+      } else if (item.kind === 'image') {
         const url = convertFileSrc(
           await invoke<string>('asset_path', { assetId: item.assetId, preview: false }),
         );
-        group.add(new Konva.Image({ image: await image(url), ...size }));
+        const img = await image(url);
+        group.add(
+          new Konva.Image({
+            image: img,
+            ...size,
+            crop: sourceCrop(item.crop, img.naturalWidth, img.naturalHeight),
+          }),
+        );
+      } else if (item.kind === 'disclosure' && item.sections) {
+        group.add(new Konva.Rect({ ...size, fill: '#f8fafc', stroke: '#cfdae5', cornerRadius: 8 }));
+        group.add(new Konva.Rect({ width: size.width, height: 28, fill: item.fill ?? '#e8eef3' }));
+        group.add(
+          new Konva.Text({
+            width: size.width,
+            height: 28,
+            padding: 8,
+            text: item.title ?? 'Сноски',
+            fontSize: 11,
+            fill: '#526775',
+          }),
+        );
+        let y = 28;
+        for (const section of item.sections) {
+          group.add(
+            new Konva.Rect({
+              y,
+              width: size.width,
+              height: disclosureHeader,
+              fill: '#edf2f7',
+              stroke: '#cfdae5',
+              strokeWidth: 1,
+            }),
+          );
+          group.add(
+            new Konva.Text({
+              y,
+              width: size.width,
+              height: disclosureHeader,
+              padding: 14,
+              text: `${section.collapsed ? '▸' : '▾'} ${section.title || 'Без заголовка'}`,
+              fontFamily: item.fontFamily ?? scene.theme.fontFamily,
+              fontSize: 16,
+              fontStyle: 'bold',
+              fill: '#243447',
+            }),
+          );
+          y += disclosureHeader;
+          if (!section.collapsed) {
+            group.add(
+              new Konva.Text({
+                y,
+                width: size.width,
+                height: section.height,
+                padding: 14,
+                text: section.content,
+                fontFamily: item.fontFamily ?? scene.theme.fontFamily,
+                fontSize: 16,
+                lineHeight: 1.5,
+                fill: '#243447',
+              }),
+            );
+            y += section.height;
+          }
+        }
       } else if (item.table) {
         const t = item.table;
         let y = 28;

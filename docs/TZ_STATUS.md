@@ -122,3 +122,7 @@ default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src
 | `npm run build`                                            | Успешно: TypeScript и Vite; остаётся предупреждение о размере lazy-чанка подробной карты |
 
 Генератор notices вызывает Cargo metadata с `--locked`, без `--offline`: на чистом CI разрешено получить отсутствующие зависимости из registry. В Windows release добавлена та же проверка форматирования, что и в Platform builds; отдельная повторная frontend-сборка перед notices убрана, её выполняет Tauri перед упаковкой. Тесты Rust и генерация notices идут перед упаковкой в обоих workflow. Удалённые Actions в этой работе не запускались.
+
+## Дополнение 0.4: обрезка, сноски и материалы
+
+Отдельная ветка `feature/crop-disclosures-materials`, без публикации. Добавлены обратимая обрезка, раскрывающиеся разделы, стеклянные панели и материалы/мерцание объектов. Модель сцены повышена до 5; основной app identifier и SQLite user_version сохранены. Новые проверки и результаты ручной проверки описаны в отчёте [FEATURES_0.4_QA.md](FEATURES_0.4_QA.md).

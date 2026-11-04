@@ -1,3 +1,4 @@
+import { hasMaterial } from './materials';
 import type { CanvasItem } from './scene';
 export function moveOneLayer(
   items: CanvasItem[],
@@ -17,19 +18,22 @@ export function moveOneLayer(
   return next;
 }
 export const isDomItem = (item: CanvasItem) =>
-  ['table', 'video', 'audio', 'link'].includes(item.kind);
+  ['table', 'video', 'audio', 'link', 'disclosure'].includes(item.kind);
 export function canvasRuns(items: CanvasItem[]) {
   const runs: { items: CanvasItem[]; zIndex: number }[] = [];
   let current: CanvasItem[] = [],
-    start = 0;
+    overlay = false;
+  // Adjacent invisible proxies share a hit layer instead of allocating a full
+  // viewport canvas per glass/sparkling object. Visible vector runs stay separate.
   items.forEach((item, index) => {
-    current.push(item);
-    if (isDomItem(item)) {
-      runs.push({ items: current, zIndex: index * 2 + 1 });
+    const nextOverlay = isDomItem(item) || hasMaterial(item);
+    if (current.length && nextOverlay !== overlay) {
+      runs.push({ items: current, zIndex: (index - 1) * 2 + 1 });
       current = [];
-      start = index + 1;
     }
+    current.push(item);
+    overlay = nextOverlay;
   });
-  if (current.length) runs.push({ items: current, zIndex: start * 2 + 1 });
+  if (current.length) runs.push({ items: current, zIndex: (items.length - 1) * 2 + 1 });
   return runs;
 }

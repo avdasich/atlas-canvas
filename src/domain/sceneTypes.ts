@@ -1,3 +1,6 @@
+import type { ImageCrop } from './crop';
+import type { DisclosureSection } from './disclosure';
+import type { Glass } from './materials';
 import type { RichRun } from './richText';
 import type { Shimmer } from './shimmer';
 export type Camera = { x: number; y: number; scale: number };
@@ -15,7 +18,8 @@ export type ItemKind =
   | 'table'
   | 'video'
   | 'audio'
-  | 'link';
+  | 'link'
+  | 'disclosure';
 export type CellStyle = {
   fill?: string;
   color?: string;
@@ -46,6 +50,10 @@ export type CanvasItem = {
   scaleX?: number;
   scaleY?: number;
   rotation?: number;
+  crop?: ImageCrop;
+  sections?: DisclosureSection[];
+  glass?: Glass;
+  shimmer?: Shimmer;
   richText?: RichRun[];
   textBackground?: string;
   width?: number;
@@ -78,6 +86,7 @@ export type CanvasItem = {
   table?: TableData;
 };
 export type Theme = {
+  glassPanels?: boolean;
   textColor?: string;
   backgroundOpacity?: number;
   imageScale?: number;
@@ -104,4 +113,4 @@ export type Theme = {
   gridSize?: number;
   snap?: boolean;
 };
-export type Scene = { schemaVersion: 4; items: CanvasItem[]; camera: Camera; theme: Theme };
+export type Scene = { schemaVersion: 5; items: CanvasItem[]; camera: Camera; theme: Theme };

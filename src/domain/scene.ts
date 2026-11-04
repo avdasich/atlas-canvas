@@ -1,3 +1,6 @@
+import { validCrop } from './crop';
+import { validSections } from './disclosure';
+import { supportsMaterial, validGlass } from './materials';
 import type { RichRun } from './richText';
 import type { Camera, CanvasItem, ItemKind, Scene, TableData, Theme } from './sceneTypes';
 import { validShimmer } from './shimmer';
@@ -14,7 +17,7 @@ export type {
 export const initialCamera: Camera = { x: 0, y: 0, scale: 1 };
 export const defaultTheme: Theme = { background: '#f8fafb', pattern: 'dots', fontFamily: 'Arial' };
 export const emptyScene = (): Scene => ({
-  schemaVersion: 4,
+  schemaVersion: 5,
   items: [],
   camera: { ...initialCamera },
   theme: { ...defaultTheme },
@@ -34,6 +37,7 @@ const kinds: ItemKind[] = [
   'video',
   'audio',
   'link',
+  'disclosure',
 ];
 const finite = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n);
 const color = (value: unknown) => typeof value === 'string' && /^#[\da-f]{6}$/i.test(value);
@@ -132,6 +136,19 @@ export function parseItems(value: unknown): CanvasItem[] {
       !finite(item.y)
     )
       throw new Error('Некорректный объект холста. Автосохранение заблокировано.');
+    if (item.crop !== undefined && (item.kind !== 'image' || !validCrop(item.crop)))
+      throw new Error('Повреждена область обрезки.');
+    if (
+      item.sections !== undefined &&
+      (item.kind !== 'disclosure' || !validSections(item.sections))
+    )
+      throw new Error('Повреждены разделы сноски.');
+    if (item.kind === 'disclosure' && !validSections(item.sections))
+      throw new Error('Отсутствуют разделы сноски.');
+    if (item.glass !== undefined && (!supportsMaterial(item) || !validGlass(item.glass)))
+      throw new Error('Повреждён материал объекта.');
+    if (item.shimmer !== undefined && (!supportsMaterial(item) || !validShimmer(item.shimmer)))
+      throw new Error('Повреждены блестяшки объекта.');
     ids.add(item.id);
     for (const key of [
       'scaleX',
@@ -225,7 +242,7 @@ export function parseItems(value: unknown): CanvasItem[] {
 export function parseScene(value: unknown): Scene {
   if (!value || typeof value !== 'object') throw new Error('Повреждён формат холста.');
   const scene = value as Scene;
-  if (![2, 3, 4].includes(scene.schemaVersion))
+  if (![2, 3, 4, 5].includes(scene.schemaVersion))
     throw new Error('Версия холста не поддерживается. Обновите приложение.');
   parseItems(scene.items);
   if (
@@ -235,6 +252,8 @@ export function parseScene(value: unknown): Scene {
   )
     throw new Error('Повреждены настройки камеры.');
   const t = scene.theme;
+  if (t?.glassPanels !== undefined && typeof t.glassPanels !== 'boolean')
+    throw new Error('Некорректный материал панелей.');
   if (
     !t ||
     !color(t.background) ||
@@ -301,5 +320,5 @@ export function parseScene(value: unknown): Scene {
     throw new Error('Повреждены закладки вида.');
   if (t.shimmer !== undefined && !validShimmer(t.shimmer))
     throw new Error('Повреждены настройки переливания.');
-  return { ...scene, schemaVersion: 4 };
+  return { ...scene, schemaVersion: 5 };
 }

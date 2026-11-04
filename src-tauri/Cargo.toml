@@ -1,6 +1,6 @@
 [package]
 name = "tauri-app"
-version = "0.3.0"
+version = "0.4.0"
 description = "A local visual atlas with one infinite canvas per country"
 authors = ["avdasich"]
 license = "MIT"

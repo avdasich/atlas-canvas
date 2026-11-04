@@ -205,6 +205,7 @@ export function useCanvasTransfers(options: TransferOptions) {
               ? {
                   ...i,
                   assetId: result.assetId,
+                  ...(item.kind === 'image' ? { crop: undefined } : {}),
                   title: file?.name ?? ('title' in result ? result.title : i.title),
                 }
               : i,

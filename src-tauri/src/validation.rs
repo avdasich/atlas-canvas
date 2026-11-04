@@ -10,7 +10,7 @@ pub(crate) fn validate_id(id: &str) -> Result<()> {
 }
 pub(crate) fn validate_scene(raw: &str) -> Result<bool> {
     let v: Value = serde_json::from_str(raw).map_err(err)?;
-    if !matches!(v["schemaVersion"].as_u64(), Some(2 | 3 | 4)) {
+    if !matches!(v["schemaVersion"].as_u64(), Some(2 | 3 | 4 | 5)) {
         return Err("Версия холста не поддерживается".into());
     }
     let items = v["items"].as_array().ok_or("Отсутствует список объектов")?;
@@ -43,7 +43,7 @@ pub(crate) fn validate_asset_id(id: &str) -> Result<()> {
     }
 }
 
-fn is_color(c: &Value) -> bool {
+pub(crate) fn is_color(c: &Value) -> bool {
     c.as_str().is_some_and(|s| {
         s.len() == 7 && s.starts_with('#') && s[1..].bytes().all(|b| b.is_ascii_hexdigit())
     })
@@ -78,6 +78,7 @@ fn validate_theme(theme: &Value) -> Result<()> {
         "minimap",
         "drawShapes",
         "repeatShape",
+        "glassPanels",
     ] {
         if theme.get(key).is_some_and(|n| n.as_bool().is_none()) {
             return Err("Некорректный переключатель оформления".into());
@@ -152,6 +153,7 @@ fn validate_theme(theme: &Value) -> Result<()> {
     Ok(())
 }
 fn validate_item(item: &Value) -> Result<()> {
+    crate::object_features::validate_item_features(item)?;
     let id = item["id"].as_str().ok_or("Объект без ID")?;
     if id.is_empty() || item["x"].as_f64().is_none() || item["y"].as_f64().is_none() {
         return Err("Некорректный объект".into());
@@ -172,6 +174,7 @@ fn validate_item(item: &Value) -> Result<()> {
         "video",
         "audio",
         "link",
+        "disclosure",
     ]
     .contains(&kind)
     {

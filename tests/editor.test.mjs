@@ -267,7 +267,7 @@ test('version 2 scenes migrate in memory without mutating the original record', 
   const old = { ...emptyScene(), schemaVersion: 2 };
   const raw = JSON.stringify(old);
   const parsed = parseScene(old);
-  assert.equal(parsed.schemaVersion, 4);
+  assert.equal(parsed.schemaVersion, 5);
   assert.equal(JSON.stringify(old), raw);
 });
 test('table structure operations preserve cells, sizes, and editable content', () => {
@@ -497,7 +497,7 @@ test('interleaved canvas runs retain every object in original depth order', () =
   );
   assert.deepEqual(
     canvasRuns(items).map((r) => r.items.map((i) => i.id)),
-    [['a', 't'], ['b', 'v'], ['c']],
+    [['a'], ['t'], ['b'], ['v'], ['c']],
   );
 });
 test('multi-page PDF has valid byte offsets for every page and image', () => {
@@ -538,10 +538,10 @@ test('exit drains preference writes and retries a failed write without dropping 
   assert.equal(result, 'saved');
 });
 
-test('version 3 scenes upgrade to format 4 so older editors cannot silently rewrite merged or rich content', () => {
+test('older scenes upgrade to format 5 so older editors cannot silently rewrite new object features', () => {
   const old = { ...emptyScene(), schemaVersion: 3 };
   const raw = JSON.stringify(old);
-  assert.equal(parseScene(JSON.parse(raw)).schemaVersion, 4);
+  assert.equal(parseScene(JSON.parse(raw)).schemaVersion, 5);
   assert.equal(JSON.stringify(old), raw);
 });
 test('bounds include thick outlines and conservative control points for smoothed strokes', () => {

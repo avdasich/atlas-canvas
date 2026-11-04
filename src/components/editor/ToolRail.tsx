@@ -126,6 +126,14 @@ export default function ToolRail({
       <button title="Редактируемая таблица" aria-label="Добавить таблицу" onClick={() => onTable()}>
         ▦
       </button>
+      <button
+        title="Раскрывающиеся сноски"
+        aria-label="Добавить сноски"
+        disabled={busy}
+        onClick={() => onAdd('disclosure')}
+      >
+        ▸≡
+      </button>
       <details className="shape-menu">
         <summary aria-label="Медиа и ссылки">▶</summary>
         <div>

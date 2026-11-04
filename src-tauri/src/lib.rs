@@ -1,6 +1,7 @@
 mod archive;
 mod images;
 mod media;
+mod object_features;
 mod operations;
 mod preferences;
 mod revisions;

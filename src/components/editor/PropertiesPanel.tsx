@@ -1,15 +1,20 @@
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import type { Size } from '../../domain/geometry';
+import { supportsMaterial } from '../../domain/materials';
 import type { CanvasItem, Theme } from '../../domain/scene';
 import Numeric from './controls/NumericField';
 import type { CellSelection } from './DomObjects';
 import AppearanceProperties from './properties/AppearanceProperties';
+import DisclosureProperties from './properties/DisclosureProperties';
 import LayerList from './properties/LayerList';
+import MaterialProperties from './properties/MaterialProperties';
 import TableProperties from './properties/TableProperties';
 import TextProperties from './properties/TextProperties';
 import ShortcutHelp from './ShortcutHelp';
 type Props = {
   onReplace: (item: CanvasItem, file?: File) => void;
+  onCrop: (item: CanvasItem) => void;
+  onResetCrop: (item: CanvasItem) => void;
   selected: CanvasItem[];
   items: CanvasItem[];
   theme: Theme;
@@ -31,6 +36,8 @@ type Props = {
 };
 export default function PropertiesPanel({
   onReplace,
+  onCrop,
+  onResetCrop,
   selected,
   items,
   theme,
@@ -89,6 +96,9 @@ export default function PropertiesPanel({
           />
         </>
       )}
+      {selected.length > 0 && selected.every(supportsMaterial) && (
+        <MaterialProperties item={selected[0]} patch={patch} />
+      )}
       {!!selected.length && (
         <>
           <Numeric
@@ -98,38 +108,45 @@ export default function PropertiesPanel({
             max={100}
             onChange={(v) => patch({ opacity: v / 100 })}
           />
-          <label className="property-field">
-            Цвет
-            <input
-              aria-label="Цвет объекта"
-              type="color"
-              value={
-                item?.fill ??
-                (item?.kind === 'note' ? '#243447' : item?.kind === 'star' ? '#f1d587' : '#a7d7df')
-              }
-              onChange={(e) => patch({ fill: e.target.value })}
-            />
-          </label>
-          {item && !['image', 'table', 'video', 'audio', 'link'].includes(item.kind) && (
-            <>
-              <label className="property-field">
-                Обводка
-                <input
-                  type="color"
-                  aria-label="Цвет обводки"
-                  value={item.stroke ?? '#578b9a'}
-                  onChange={(e) => patch({ stroke: e.target.value })}
-                />
-              </label>
-              <Numeric
-                label="Толщина линии"
-                value={item.strokeWidth ?? 2}
-                min={0}
-                max={100}
-                onChange={(strokeWidth) => patch({ strokeWidth })}
+          {!item?.glass?.enabled && (
+            <label className="property-field">
+              Цвет
+              <input
+                aria-label="Цвет объекта"
+                type="color"
+                value={
+                  item?.fill ??
+                  (item?.kind === 'note'
+                    ? '#243447'
+                    : item?.kind === 'star'
+                      ? '#f1d587'
+                      : '#a7d7df')
+                }
+                onChange={(e) => patch({ fill: e.target.value })}
               />
-            </>
+            </label>
           )}
+          {item &&
+            !['image', 'table', 'video', 'audio', 'link', 'disclosure'].includes(item.kind) && (
+              <>
+                <label className="property-field">
+                  Обводка
+                  <input
+                    type="color"
+                    aria-label="Цвет обводки"
+                    value={item.stroke ?? '#578b9a'}
+                    onChange={(e) => patch({ stroke: e.target.value })}
+                  />
+                </label>
+                <Numeric
+                  label="Толщина линии"
+                  value={item.strokeWidth ?? 2}
+                  min={0}
+                  max={100}
+                  onChange={(strokeWidth) => patch({ strokeWidth })}
+                />
+              </>
+            )}
           {item && (
             <Numeric
               label="Тень"
@@ -192,7 +209,8 @@ export default function PropertiesPanel({
               onChange={(cornerRadius) => patch({ cornerRadius })}
             />
           )}
-          {(item?.kind === 'note' || table) && (
+          {item?.kind === 'disclosure' && <DisclosureProperties item={item} patch={patch} />}
+          {(item?.kind === 'note' || item?.kind === 'disclosure' || table) && (
             <label className="property-field">
               Шрифт
               <select
@@ -206,6 +224,18 @@ export default function PropertiesPanel({
           )}
           {item?.kind === 'note' && <TextProperties item={item} patch={patch} />}
           {table && item && <TableProperties item={item} theme={theme} cell={cell} patch={patch} />}
+          {item?.kind === 'image' && (
+            <div className="panel-actions">
+              <button disabled={item.locked} onClick={() => onCrop(item)}>
+                Обрезать изображение
+              </button>
+              {item.crop && (
+                <button disabled={item.locked} onClick={() => onResetCrop(item)}>
+                  Вернуть изображение целиком
+                </button>
+              )}
+            </div>
+          )}
           {item?.kind === 'image' && (
             <label className="property-field">
               Заменить файл фото

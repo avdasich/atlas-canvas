@@ -22,6 +22,17 @@ export default function AppearanceProperties({
   ));
   return (
     <>
+      <fieldset className="glass-settings">
+        <legend>Панели редактора</legend>
+        <label className="check-field">
+          <input
+            type="checkbox"
+            checked={theme.glassPanels ?? false}
+            onChange={(e) => setTheme({ ...theme, glassPanels: e.target.checked })}
+          />
+          Стеклянные панели
+        </label>
+      </fieldset>
       <ThemeLibrary theme={theme} onChange={setTheme} />
       <ShimmerSettings
         value={theme.shimmer}

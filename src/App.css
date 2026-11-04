@@ -1243,3 +1243,268 @@ h1 {
     font-size: 18px;
   }
 }
+
+/* Non-destructive image cropping. */
+.crop-dialog {
+  width: min(760px, calc(100vw - 32px));
+}
+.crop-frame {
+  position: relative;
+  margin: 16px auto;
+  overflow: hidden;
+  touch-action: none;
+  background: #dce3e9;
+}
+.crop-frame > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.crop-selection {
+  position: absolute;
+  border: 2px solid #ffffff;
+  box-shadow:
+    0 0 0 9999px #101b2d99,
+    inset 0 0 0 1px #15263880;
+  cursor: move;
+  touch-action: none;
+}
+.crop-corner {
+  position: absolute;
+  width: 15px;
+  height: 15px;
+  min-width: 0;
+  padding: 0;
+  border: 1px solid #20374f;
+  border-radius: 3px;
+  background: white;
+}
+.crop-corner.nw {
+  left: -7px;
+  top: -7px;
+  cursor: nwse-resize;
+}
+.crop-corner.ne {
+  right: -7px;
+  top: -7px;
+  cursor: nesw-resize;
+}
+.crop-corner.sw {
+  left: -7px;
+  bottom: -7px;
+  cursor: nesw-resize;
+}
+.crop-corner.se {
+  right: -7px;
+  bottom: -7px;
+  cursor: nwse-resize;
+}
+.crop-thirds {
+  position: absolute;
+  pointer-events: none;
+}
+.crop-thirds.horizontal {
+  inset: 33.33% 0;
+  border-top: 1px solid #ffffff88;
+  border-bottom: 1px solid #ffffff88;
+}
+.crop-thirds.vertical {
+  inset: 0 33.33%;
+  border-left: 1px solid #ffffff88;
+  border-right: 1px solid #ffffff88;
+}
+.crop-values {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+.crop-values label {
+  min-width: 0;
+  font-size: 12px;
+}
+.crop-values input {
+  width: 100%;
+}
+
+/* Expandable notes retain editable text while collapsed. */
+.disclosure-sections {
+  color: #243447;
+  background: #f8fafc;
+}
+.disclosure-heading {
+  width: 100%;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  text-align: left;
+  border: 0;
+  border-bottom: 1px solid #cfdae5;
+  border-radius: 0;
+  background: #edf2f7;
+  color: inherit;
+  font: inherit;
+}
+.disclosure-heading strong {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.disclosure-sections textarea,
+.disclosure-reading {
+  width: 100%;
+  display: block;
+  padding: 14px;
+  border: 0;
+  border-radius: 0;
+  resize: none;
+  background: #f8fafc;
+  color: inherit;
+  font: inherit;
+  line-height: 1.5;
+  overflow: auto;
+}
+.disclosure-reading {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.disclosure-properties {
+  padding: 8px;
+  border: 1px solid #d7e1e9;
+  border-radius: 8px;
+  margin: 10px 0;
+}
+
+/* Dragging objects must not select the surrounding HTML page. */
+.canvas-viewport {
+  user-select: none;
+  -webkit-user-select: none;
+}
+.canvas-viewport input,
+.canvas-viewport textarea,
+.canvas-viewport [contenteditable],
+.disclosure-reading {
+  user-select: text;
+  -webkit-user-select: text;
+}
+/* The canvas remains responsible for hits; local material layers show the pixels. */
+.object-material {
+  position: absolute;
+  width: 0;
+  height: 0;
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+.material-layer {
+  position: absolute;
+  display: block;
+  pointer-events: none;
+  max-width: none;
+}
+.glass-object-surface {
+  background-clip: border-box;
+}
+.glass-settings {
+  border: 1px solid #d4dfe8;
+  border-radius: 10px;
+  padding: 10px;
+  margin: 10px 0;
+}
+.glass-settings legend {
+  padding: 0 5px;
+  font-weight: 600;
+}
+.material-properties > summary {
+  margin-bottom: 10px;
+}
+
+/* Optional glass editor panels float above the country background. */
+.glass-panels .editor-body {
+  position: relative;
+  display: block;
+}
+.glass-panels .canvas-viewport {
+  position: absolute;
+  inset: 0;
+}
+.glass-panels:not(.view-only) .tool-rail {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  bottom: 10px;
+  z-index: 5;
+  width: 58px;
+  border-radius: 18px;
+  overflow: visible;
+}
+.glass-panels:not(.view-only) .properties-panel {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  bottom: 10px;
+  z-index: 6;
+  width: clamp(180px, 28vw, 272px);
+  border-radius: 18px;
+}
+.glass-panels .country-toolbar,
+.glass-panels .editor-status,
+.glass-panels .tool-rail {
+  background: linear-gradient(140deg, #ffffff30, #17354970);
+  border: 1px solid #ffffff66;
+  box-shadow:
+    inset 0 1px 0 #ffffffaa,
+    0 10px 35px #1728401c;
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+}
+.glass-panels .properties-panel {
+  background: linear-gradient(135deg, #ffffffbb, #e7f2fa88);
+  border: 1px solid #ffffffcc;
+  box-shadow:
+    inset 0 1px 0 #ffffff,
+    0 10px 35px #17284022;
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+}
+.glass-panels .canvas-navigation {
+  left: 80px;
+}
+.glass-panels .shape-menu > div {
+  position: absolute;
+  left: calc(100% + 12px);
+}
+.glass-panels .tool-rail button,
+.glass-panels .tool-rail summary {
+  background: #27475e66;
+}
+.glass-panels .country-toolbar button {
+  background: #27475e66;
+}
+.glass-panels .editor-status {
+  color: #ecf6ff;
+}
+@media (max-width: 650px) {
+  .glass-panels:not(.view-only) .properties-panel {
+    display: none;
+  }
+  .crop-values {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+.glass-panels {
+  background: #526a7d;
+}
+@media (max-height: 650px) {
+  .glass-panels .tool-rail {
+    gap: 2px;
+    padding: 6px;
+  }
+  .glass-panels .tool-rail > button,
+  .glass-panels .shape-menu > summary {
+    width: 32px;
+    height: 26px;
+    font-size: 20px;
+  }
+}

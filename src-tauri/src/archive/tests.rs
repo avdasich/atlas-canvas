@@ -215,3 +215,58 @@ fn automatic_backup_keeps_a_valid_archive_without_repeating_every_save() {
     assert_eq!(files.len(), 1);
     fs::remove_dir_all(source).unwrap();
 }
+
+#[test]
+fn format_five_archive_keeps_crop_sections_materials_and_original_bytes() {
+    let source = dir();
+    let asset = seed(&source);
+    let mut scene: Value = serde_json::from_str(&raw(Some(&asset))).unwrap();
+    scene["schemaVersion"] = serde_json::json!(5);
+    scene["theme"]["glassPanels"] = serde_json::json!(true);
+    scene["items"][0]["crop"] = serde_json::json!({"x":0.1,"y":0.2,"width":0.7,"height":0.5});
+    scene["items"].as_array_mut().unwrap().extend([
+        serde_json::json!({"id":"details","kind":"disclosure","x":0,"y":0,"sections":[{"id":"hidden","title":"Источники","content":"Текст внутри свёрнутого раздела","height":140,"collapsed":true}]}),
+        serde_json::json!({"id":"material","kind":"star","x":20,"y":30,"glass":{"enabled":true,"blur":12,"opacity":0.25,"tint":"#dbeeff"},"shimmer":{"enabled":true,"speed":0.7,"intensity":0.5,"color":"#ffffff"}})
+    ]);
+    let mut conn = connect(&source).unwrap();
+    write_scene(&mut conn, "398", &scene.to_string(), None).unwrap();
+    drop(conn);
+    let archive = source.join("format-five.atlas");
+    write_archive(&source, &archive, None).unwrap();
+    let target = dir();
+    let stage = target.join("stage");
+    let manifest = stage_archive(&archive, &stage).unwrap();
+    apply_staged(
+        &target,
+        &Staged {
+            dir: stage,
+            manifest,
+        },
+        false,
+    )
+    .unwrap();
+    let conn = connect(&target).unwrap();
+    let restored: Value =
+        serde_json::from_str(&read_scene(&conn, "398").unwrap().unwrap()).unwrap();
+    assert_eq!(restored["schemaVersion"], 5);
+    assert_eq!(restored["theme"], scene["theme"]);
+    assert_eq!(restored["items"][0]["crop"], scene["items"][0]["crop"]);
+    assert_eq!(restored["items"][1], scene["items"][1]);
+    assert_eq!(restored["items"][2], scene["items"][2]);
+    let id = restored["items"][0]["assetId"].as_str().unwrap();
+    assert_ne!(id, asset);
+    let relative: String = conn
+        .query_row(
+            "SELECT internal_path FROM assets WHERE id=?1",
+            [id],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(
+        fs::read(target.join(relative)).unwrap(),
+        b"PNG test original bytes"
+    );
+    drop(conn);
+    fs::remove_dir_all(source).unwrap();
+    fs::remove_dir_all(target).unwrap();
+}

@@ -1,9 +1,11 @@
+import { disclosureSize } from './disclosure';
 import type { Camera, CanvasItem } from './scene';
 import { tableSize } from './table';
 export type Bounds = { left: number; top: number; right: number; bottom: number };
 export type Size = { width: number; height: number };
 export type TextSize = (item: CanvasItem) => Size;
 export function dimensions(item: CanvasItem): Size {
+  if (item.kind === 'disclosure') return disclosureSize(item);
   if (item.kind === 'ellipse') return { width: 130, height: 90 };
   if (item.kind === 'table' && item.table) return tableSize(item.table);
   if (item.kind === 'video') return { width: item.width ?? 400, height: item.height ?? 260 };

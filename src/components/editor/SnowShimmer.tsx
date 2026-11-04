@@ -4,8 +4,14 @@ import { defaultShimmer, drawShimmer, snowCrystals, type Shimmer } from '../../d
 export function ShimmerSettings({
   value,
   onChange,
+  legend = 'Эффект фона',
+  label = 'Снежное переливание',
+  hint = 'Мелкие кристаллы плавно мерцают поверх выбранного фона.',
 }: {
   value?: Shimmer;
+  legend?: string;
+  label?: string;
+  hint?: string;
   onChange: (value: Shimmer) => void;
 }) {
   const s = value ?? defaultShimmer;
@@ -19,18 +25,18 @@ export function ShimmerSettings({
   }, []);
   return (
     <fieldset className="shimmer-settings">
-      <legend>Эффект фона</legend>
+      <legend>{legend}</legend>
       <label className="check-field">
         <input
           type="checkbox"
           checked={s.enabled}
           onChange={(e) => onChange({ ...s, enabled: e.target.checked })}
         />
-        Снежное переливание
+        {label}
       </label>
       {s.enabled && (
         <>
-          <p className="panel-hint">Мелкие кристаллы плавно мерцают поверх выбранного фона.</p>
+          <p className="panel-hint">{hint}</p>
           <label className="property-field">
             Интенсивность · {Math.round(s.intensity * 100)}%
             <input

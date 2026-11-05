@@ -100,10 +100,10 @@ fn remap(v: &mut Value, m: &BTreeMap<String, String>) {
         Value::Object(o) => {
             for (k, v) in o {
                 if ["assetId", "backgroundAssetId"].contains(&k.as_str()) {
-                    if let Some(id) = v.as_str() {
-                        if let Some(new) = m.get(id) {
-                            *v = Value::String(new.clone());
-                        }
+                    if let Some(id) = v.as_str()
+                        && let Some(new) = m.get(id)
+                    {
+                        *v = Value::String(new.clone());
                     }
                 } else if k == "fontFamily" {
                     if let Some(new) = v
@@ -345,10 +345,10 @@ fn stage_archive_with_operation(
             {
                 return Err("Некорректное вложение".into());
             }
-            if let Some(old) = files.insert(name.clone(), hash.clone()) {
-                if old != *hash {
-                    return Err("Конфликт контрольных сумм".into());
-                }
+            if let Some(old) = files.insert(name.clone(), hash.clone())
+                && old != *hash
+            {
+                return Err("Конфликт контрольных сумм".into());
             }
         }
     }

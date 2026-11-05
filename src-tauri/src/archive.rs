@@ -13,9 +13,13 @@ use std::{
     fs,
     io::{Read, Write},
     path::{Path, PathBuf},
-    sync::Mutex,
+    sync::{
+        Arc, Mutex,
+        atomic::{AtomicBool, Ordering},
+    },
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Manager, State};
 use tauri_plugin_dialog::DialogExt;
 use zip::{ZipArchive, ZipWriter, write::SimpleFileOptions};
 #[derive(Clone, Serialize, Deserialize)]
@@ -50,6 +54,58 @@ pub struct Staged {
 }
 #[derive(Default)]
 pub struct Imports(pub Mutex<HashMap<String, Staged>>);
+
+pub(crate) const AUTOMATIC_BACKUP_LIMIT: usize = 5;
+const AUTOMATIC_BACKUP_INTERVAL: Duration = Duration::from_secs(3600);
+
+#[derive(Default)]
+pub struct AutomaticBackups {
+    running: Arc<AtomicBool>,
+}
+
+struct BackupPermit(Arc<AtomicBool>);
+
+impl Drop for BackupPermit {
+    fn drop(&mut self) {
+        self.0.store(false, Ordering::Release);
+    }
+}
+
+impl AutomaticBackups {
+    fn spawn(
+        &self,
+        backup: impl FnOnce() -> Result<()> + Send + 'static,
+        report_error: impl FnOnce(String) + Send + 'static,
+    ) -> bool {
+        if self
+            .running
+            .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+            .is_err()
+        {
+            return false;
+        }
+        let permit = BackupPermit(Arc::clone(&self.running));
+        tauri::async_runtime::spawn_blocking(move || {
+            let result = backup();
+            drop(permit);
+            if let Err(error) = result {
+                report_error(error);
+            }
+        });
+        true
+    }
+}
+
+pub(crate) fn schedule_automatic_backup(app: AppHandle, dir: PathBuf) {
+    let worker_app = app.clone();
+    app.state::<AutomaticBackups>().spawn(
+        move || automatic_backup(&dir),
+        move |error| {
+            use tauri::Emitter;
+            let _ = worker_app.emit("atlas-backup-error", error);
+        },
+    );
+}
 fn checksum_with_operation(path: &Path, operation: Option<&Operation>) -> Result<String> {
     let mut f = ProgressReader::new(fs::File::open(path).map_err(err)?, operation);
     let mut h = Sha256::new();
@@ -746,6 +802,39 @@ pub async fn apply_archive(
 }
 
 pub(crate) fn automatic_backup(dir: &Path) -> Result<()> {
+    automatic_backup_using(dir, |dir, dest| write_archive(dir, dest, None))
+}
+
+struct AutomaticBackupFile {
+    path: PathBuf,
+    modified: SystemTime,
+}
+
+fn automatic_backup_files(folder: &Path) -> Result<Vec<AutomaticBackupFile>> {
+    let mut backups = Vec::new();
+    for entry in fs::read_dir(folder).map_err(err)? {
+        let entry = entry.map_err(err)?;
+        let name = entry.file_name();
+        if !name
+            .to_str()
+            .is_some_and(|name| name.starts_with("auto-") && name.ends_with(".atlas"))
+            || !entry.file_type().map_err(err)?.is_file()
+        {
+            continue;
+        }
+        backups.push(AutomaticBackupFile {
+            path: entry.path(),
+            modified: entry.metadata().map_err(err)?.modified().map_err(err)?,
+        });
+    }
+    backups.sort_by(|a, b| a.modified.cmp(&b.modified).then(a.path.cmp(&b.path)));
+    Ok(backups)
+}
+
+fn automatic_backup_using(
+    dir: &Path,
+    write: impl FnOnce(&Path, &Path) -> Result<()>,
+) -> Result<()> {
     let conn = connect(dir)?;
     let has_content: bool = conn
         .query_row(
@@ -757,19 +846,63 @@ pub(crate) fn automatic_backup(dir: &Path) -> Result<()> {
     if !has_content {
         return Ok(());
     }
-    drop(conn);
+    let latest_change: Option<f64> = conn
+        .query_row(
+            "SELECT (julianday(MAX(updated_at)) - 2440587.5) * 86400.0 FROM scenes",
+            [],
+            |r| r.get(0),
+        )
+        .map_err(err)?;
+    let latest_change =
+        latest_change.ok_or("Не удалось определить время последнего изменения холста.")?;
     let folder = dir.join("backups");
     fs::create_dir_all(&folder).map_err(err)?;
-    let recent = fs::read_dir(&folder)
-        .map_err(err)?
-        .filter_map(|e| e.ok())
-        .filter(|e| e.file_name().to_string_lossy().starts_with("auto-"))
-        .filter_map(|e| e.metadata().ok()?.modified().ok())
-        .max();
-    if recent.is_some_and(|t| t.elapsed().map_or(true, |d| d.as_secs() < 3600)) {
+    if let Some(recent) = automatic_backup_files(&folder)?.last()
+        && (recent
+            .modified
+            .elapsed()
+            .map_or(true, |elapsed| elapsed < AUTOMATIC_BACKUP_INTERVAL)
+            || latest_change
+                <= recent
+                    .modified
+                    .duration_since(UNIX_EPOCH)
+                    .map_err(err)?
+                    .as_secs_f64())
+    {
         return Ok(());
     }
-    write_archive(dir, &folder.join(format!("auto-{}.atlas", new_id())), None)
+    drop(conn);
+
+    let id = new_id();
+    let destination = folder.join(format!("auto-{id}.atlas"));
+    let pending = folder.join(format!(".auto-{id}.pending"));
+    // Saves may continue during the archive's read transaction. Completion time would
+    // incorrectly mark those newer changes as already backed up.
+    let started = SystemTime::now();
+    let result = (|| {
+        write(dir, &pending)?;
+        fs::OpenOptions::new()
+            .write(true)
+            .open(&pending)
+            .map_err(err)?
+            .set_modified(started)
+            .map_err(err)?;
+        // The final auto-*.atlas name is visible only after all writes have succeeded,
+        // including on filesystems where write_archive falls back from hard links.
+        fs::rename(&pending, &destination).map_err(err)?;
+        for old in automatic_backup_files(&folder)?
+            .into_iter()
+            .rev()
+            .skip(AUTOMATIC_BACKUP_LIMIT)
+        {
+            fs::remove_file(old.path).map_err(err)?;
+        }
+        Ok(())
+    })();
+    if result.is_err() {
+        let _ = fs::remove_file(pending);
+    }
+    result
 }
 #[tauri::command]
 pub fn open_backup_folder(app: AppHandle) -> Result<()> {

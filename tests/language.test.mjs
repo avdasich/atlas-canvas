@@ -82,6 +82,13 @@ test('queued and native errors translate only known messages and preserve paths'
     translateMessage('Архив сохранён: /tmp/Мой атлас.atlas'),
     'Backup saved: /tmp/Мой атлас.atlas',
   );
+  assert.equal(
+    t(
+      'Автокопия не создана: {0}',
+      translateMessage('Не удалось определить время последнего изменения холста.'),
+    ),
+    'Automatic backup failed: Could not determine when the canvas last changed.',
+  );
   assert.equal(translateMessage('/tmp/Сохранено.png'), '/tmp/Сохранено.png');
   setLanguage('ru');
   assert.equal(translateMessage('Saved'), 'Сохранено');

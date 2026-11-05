@@ -89,6 +89,10 @@ Manual native checks remain necessary for WebView, system dialogs, codecs, depth
 
 Vite reports the large lazy detailed-map chunk (about 756 kB before gzip). The warning is visible rather than disabled. No cross-platform frame-rate claim is made for large scenes.
 
+## Automatic backups
+
+Automatic backups start in a separate blocking task after a scene is committed. Managed `AutomaticBackups` state permits one worker; errors use `atlas-backup-error`. Eligibility compares `MAX(scenes.updated_at)` with the latest automatic copy. An archive is atomically renamed from its own `.pending` file before pruning `auto-*.atlas` to 5 copies. Its timestamp marks the start of reading so saves during archiving remain eligible for another copy. Shared preference changes alone do not trigger a backup. Exit waits for scene/settings writes, not the background archive; use manual export when a completed snapshot is needed immediately.
+
 ## Resources and notices
 
 `npm run notices` collects production npm/Cargo dependency notices into `public/licenses/notices.json`. Review components that have SPDX metadata without a full license text before release. Additional upstream license sources and commit IDs are in `public/licenses/upstream/index.json`.

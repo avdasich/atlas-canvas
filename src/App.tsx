@@ -50,7 +50,7 @@ function App() {
     let cancelled = false;
     let off: (() => void) | undefined;
     void listen<string>('atlas-backup-error', (e) =>
-      setBackupError(tr('Автокопия не создана: {0}', e.payload)),
+      setBackupError(tr('Автокопия не создана: {0}', translateMessage(e.payload))),
     ).then((fn) => {
       if (cancelled) fn();
       else off = fn;

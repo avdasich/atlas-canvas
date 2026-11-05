@@ -2,6 +2,11 @@
 
 # Change history
 
+## Unreleased
+
+- Automatic backups run outside the canvas save path, at most once per hour and only after canvas changes. Only one backup worker runs at a time; errors retain the existing notification.
+- Keep the latest 5 automatic archives, pruning only after a successful new copy. Manual exports, pre-restore copies and temporary files are excluded from retention.
+
 ## 0.4.2
 
 - English and Russian interface with saved language selection; country IDs and canvas content stay unchanged.

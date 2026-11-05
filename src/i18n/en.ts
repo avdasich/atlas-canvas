@@ -1,4 +1,6 @@
 export const english: Record<string, string> = {
+  'Не удалось определить время последнего изменения холста.':
+    'Could not determine when the canvas last changed.',
   'Не удалось завершить сохранение: {0}': 'Could not finish saving: {0}',
   'Автокопия не создана: {0}': 'Automatic backup failed: {0}',
   'Загрузка редактора…': 'Loading editor…',
@@ -78,8 +80,8 @@ export const english: Record<string, string> = {
   'Экспорт этой страны': 'Export this country',
   'Открыть архив для восстановления': 'Open archive to restore',
   'Папка резервных копий': 'Backup folder',
-  'Автоматическая копия создаётся при сохранении, не чаще раза в час. Копии не удаляются автоматически. Перед экспортом откройте и перенесите прежние холсты из localStorage.':
-    'Automatic backups are created when saving, at most once per hour. They are not deleted automatically. Migrate any legacy canvases before exporting.',
+  'Автоматические копии создаются в фоне при сохранении, не чаще раза в час после изменений холстов. Хранятся последние 5 копий; старые удаляются только после успешной записи новой. Ручные экспорты не удаляются.':
+    'Automatic backups run in the background after canvas changes, at most once per hour. The latest 5 are kept; older copies are removed only after a new one is saved successfully. Manual exports are not deleted.',
   'Проверка архива завершена': 'Archive verified',
   'стран ·': 'countries ·',
   вложений: 'attachments',

@@ -329,3 +329,6 @@ fn public_demo_keeps_existing_countries_and_shared_preferences_by_default() {
     drop(conn);
     fs::remove_dir_all(target).unwrap();
 }
+
+#[path = "automatic_backup_tests.rs"]
+mod automatic_backup_tests;

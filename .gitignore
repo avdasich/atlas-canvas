@@ -39,3 +39,7 @@ target/
 *.p12
 *.pfx
 *.keystore
+
+# Public demonstration archive (no personal data)
+!demo/Atlas-Canvas-Iceland.atlas
+release-assets/

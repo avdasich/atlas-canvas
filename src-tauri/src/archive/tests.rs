@@ -270,3 +270,56 @@ fn format_five_archive_keeps_crop_sections_materials_and_original_bytes() {
     fs::remove_dir_all(source).unwrap();
     fs::remove_dir_all(target).unwrap();
 }
+
+#[test]
+fn public_demo_keeps_existing_countries_and_shared_preferences_by_default() {
+    let target = dir();
+    let mut conn = connect(&target).unwrap();
+    let previous = raw(None);
+    write_scene(&mut conn, "352", &previous, None).unwrap();
+    conn.execute(
+        "INSERT INTO preferences(key,json) VALUES ('editor',?1)",
+        [r#"{"theme":"light"}"#],
+    )
+    .unwrap();
+    drop(conn);
+    let file = target.join("public-demo.atlas");
+    fs::write(
+        &file,
+        include_bytes!("../../../demo/Atlas-Canvas-Iceland.atlas"),
+    )
+    .unwrap();
+    let staging = target.join("stage");
+    let manifest = stage_archive(&file, &staging).unwrap();
+    assert_eq!(manifest.scenes.len(), 3);
+    assert!(manifest.preferences.is_empty());
+    let result = apply_staged(
+        &target,
+        &Staged {
+            dir: staging,
+            manifest,
+        },
+        false,
+    )
+    .unwrap();
+    assert_eq!(result.imported, 2);
+    assert_eq!(result.skipped, 1);
+    let conn = connect(&target).unwrap();
+    assert_eq!(read_scene(&conn, "352").unwrap(), Some(previous));
+    for country in ["578", "392"] {
+        let restored: Value =
+            serde_json::from_str(&read_scene(&conn, country).unwrap().unwrap()).unwrap();
+        assert_eq!(restored["schemaVersion"], 5);
+        assert!(!restored["items"].as_array().unwrap().is_empty());
+    }
+    let prefs: String = conn
+        .query_row(
+            "SELECT json FROM preferences WHERE key='editor'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(prefs, r#"{"theme":"light"}"#);
+    drop(conn);
+    fs::remove_dir_all(target).unwrap();
+}

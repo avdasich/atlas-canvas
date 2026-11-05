@@ -1,0 +1,667 @@
+[
+  {
+    "country_id": "352",
+    "scene": {
+      "schemaVersion": 5,
+      "items": [
+        {
+          "id": "d049e89d-1fde-504d-8113-1184888b7b7d",
+          "kind": "image",
+          "x": 0,
+          "y": 0,
+          "width": 1240,
+          "height": 340,
+          "assetId": "16a1ef6a-8d83-5627-8803-0b5321d00ada",
+          "title": "Исландский пейзаж · Emanuele Rossini / CC0",
+          "crop": {
+            "x": 0,
+            "y": 0.1,
+            "width": 1,
+            "height": 0.485
+          }
+        },
+        {
+          "id": "7183ef8f-e175-5c1c-a448-436195656cd6",
+          "kind": "rectangle",
+          "x": 620,
+          "y": 170,
+          "width": 1240,
+          "height": 340,
+          "fill": "#091921",
+          "strokeWidth": 0,
+          "opacity": 0.25,
+          "locked": true,
+          "cornerRadius": 0
+        },
+        {
+          "id": "7cd54a4b-b764-568b-aad3-127ab1e6eba2",
+          "kind": "note",
+          "x": 38,
+          "y": 32,
+          "content": "ЛИЧНЫЙ АТЛАС  /  01",
+          "width": 580,
+          "fontSize": 16,
+          "lineHeight": 1.3,
+          "fill": "#ffffff"
+        },
+        {
+          "id": "efbc1d11-d5f4-5cee-abf1-e9aeba385452",
+          "kind": "note",
+          "x": 32,
+          "y": 89,
+          "content": "Исландия",
+          "width": 870,
+          "fontSize": 94,
+          "lineHeight": 1.3,
+          "fontFamily": "AtlasFont-856b422f-bb44-5752-ac39-1e24067b6205",
+          "glass": {
+            "enabled": true,
+            "blur": 10,
+            "tint": "#e2f2fa",
+            "opacity": 0.27
+          },
+          "shimmer": {
+            "enabled": true,
+            "intensity": 0.65,
+            "speed": 0.65,
+            "color": "#ffffff"
+          }
+        },
+        {
+          "id": "ded751d3-2640-5dc3-9c5e-7c3c2d018b4e",
+          "kind": "note",
+          "x": 40,
+          "y": 239,
+          "content": "Ветер, вода и места, которые хочется запомнить.",
+          "width": 900,
+          "fontSize": 22,
+          "lineHeight": 1.3,
+          "fill": "#ffffff"
+        },
+        {
+          "id": "b43270f4-c4f7-5ade-bb33-661844a32f4c",
+          "kind": "star",
+          "x": 1145,
+          "y": 76,
+          "scaleX": 0.65,
+          "scaleY": 0.65,
+          "glass": {
+            "enabled": true,
+            "blur": 10,
+            "tint": "#e2f2fa",
+            "opacity": 0.27
+          },
+          "shimmer": {
+            "enabled": true,
+            "intensity": 0.65,
+            "speed": 0.65,
+            "color": "#ffffff"
+          }
+        },
+        {
+          "id": "91971d5e-020f-5716-8b47-303d95c6ebaa",
+          "kind": "note",
+          "x": 0,
+          "y": 369,
+          "content": "01  /  НЕСПЕШНЫЙ МАРШРУТ",
+          "width": 580,
+          "fontSize": 15,
+          "lineHeight": 1.3,
+          "fill": "#b6c9c9"
+        },
+        {
+          "id": "815c353d-976e-59df-9429-b3c8d33802f3",
+          "kind": "note",
+          "x": 650,
+          "y": 369,
+          "content": "02  /  МОМЕНТ В ДВИЖЕНИИ",
+          "width": 580,
+          "fontSize": 15,
+          "lineHeight": 1.3,
+          "fill": "#b6c9c9"
+        },
+        {
+          "id": "d0a4a105-6fde-5a42-baf1-5f9b502381a6",
+          "kind": "table",
+          "x": 0,
+          "y": 410,
+          "title": "Маршрут · идея путешествия",
+          "table": {
+            "cells": [
+              [
+                {
+                  "text": "День"
+                },
+                {
+                  "text": "Место"
+                },
+                {
+                  "text": "Оставить время на…"
+                }
+              ],
+              [
+                {
+                  "text": "01"
+                },
+                {
+                  "text": "Рейкьявик"
+                },
+                {
+                  "text": "Прогулку без спешки"
+                }
+              ],
+              [
+                {
+                  "text": "02"
+                },
+                {
+                  "text": "Гейзеры"
+                },
+                {
+                  "text": "Видео и шум воды"
+                }
+              ],
+              [
+                {
+                  "text": "03"
+                },
+                {
+                  "text": "Пейзажи"
+                },
+                {
+                  "text": "Остановки по пути"
+                }
+              ]
+            ],
+            "columnWidths": [90, 180, 320],
+            "rowHeights": [48, 48, 48, 48],
+            "header": true,
+            "borderColor": "#d6d1c2",
+            "background": "#f5f1e7",
+            "color": "#253a40",
+            "borderWidth": 1,
+            "fontSize": 18,
+            "padding": 12,
+            "radius": 12,
+            "headerFill": "#e2d6bc"
+          }
+        },
+        {
+          "id": "61bc67b8-a02c-5b1d-95a0-b5ab44b58786",
+          "kind": "video",
+          "x": 650,
+          "y": 410,
+          "width": 590,
+          "height": 356,
+          "assetId": "262a9daa-c872-5d6a-aab9-5a2ec46b1fd4",
+          "title": "Гейзер, Исландия · 15 секунд · Vicartb / CC0"
+        },
+        {
+          "id": "c3cc8330-227a-5929-a0b7-bd7cc9d91054",
+          "kind": "disclosure",
+          "x": 0,
+          "y": 664,
+          "width": 590,
+          "title": "На полях путешествия",
+          "sections": [
+            {
+              "id": "fe80f794-41c6-56eb-a606-5b7db0dbc622",
+              "title": "Путевые заметки",
+              "content": "Не пытаться увидеть всё за один день. Оставить место для случайных поворотов, долгого чая и ещё одной фотографии.",
+              "collapsed": false,
+              "height": 112
+            },
+            {
+              "id": "b3db289a-8a54-59de-9da4-be2b9b86c04e",
+              "title": "Что взять с собой",
+              "content": "Камеру, блокнот и свободное место для новых впечатлений. Это пример записей, а не список обязательных вещей.",
+              "collapsed": true,
+              "height": 122
+            },
+            {
+              "id": "b4d439ab-8a2c-5c83-b6f9-fc8f24878747",
+              "title": "Источники и авторы",
+              "content": "Фото: Emanuele Rossini — Freedom Icelandic Landscape (CC0).\nhttps://commons.wikimedia.org/wiki/File:Freedom_Icelandic_Landscape_(135237371).jpeg\n\nВидео, кадр и звук: Vicartb — Geisir.webm (CC0), перекодировано в MP4/WAV.\nhttps://commons.wikimedia.org/wiki/File:Geisir.webm\n\nШрифт: Noto Serif, SIL Open Font License 1.1.\nТексты и маршрут — вымышленный пример для демонстрации приложения.\n\nCopyright 2022 The Noto Project Authors (https://github.com/notofonts/latin-greek-cyrillic)\n\nThis Font Software is licensed under the SIL Open Font License, Version 1.1.\nThis license is copied below, and is also available with a FAQ at:\nhttps://scripts.sil.org/OFL\n\n\n-----------------------------------------------------------\nSIL OPEN FONT LICENSE Version 1.1 - 26 February 2007\n-----------------------------------------------------------\n\nPREAMBLE\nThe goals of the Open Font License (OFL) are to stimulate worldwide\ndevelopment of collaborative font projects, to support the font creation\nefforts of academic and linguistic communities, and to provide a free and\nopen framework in which fonts may be shared and improved in partnership\nwith others.\n\nThe OFL allows the licensed fonts to be used, studied, modified and\nredistributed freely as long as they are not sold by themselves. The\nfonts, including any derivative works, can be bundled, embedded, \nredistributed and/or sold with any software provided that any reserved\nnames are not used by derivative works. The fonts and derivatives,\nhowever, cannot be released under any other type of license. The\nrequirement for fonts to remain under this license does not apply\nto any document created using the fonts or their derivatives.\n\nDEFINITIONS\n\"Font Software\" refers to the set of files released by the Copyright\nHolder(s) under this license and clearly marked as such. This may\ninclude source files, build scripts and documentation.\n\n\"Reserved Font Name\" refers to any names specified as such after the\ncopyright statement(s).\n\n\"Original Version\" refers to the collection of Font Software components as\ndistributed by the Copyright Holder(s).\n\n\"Modified Version\" refers to any derivative made by adding to, deleting,\nor substituting -- in part or in whole -- any of the components of the\nOriginal Version, by changing formats or by porting the Font Software to a\nnew environment.\n\n\"Author\" refers to any designer, engineer, programmer, technical\nwriter or other person who contributed to the Font Software.\n\nPERMISSION & CONDITIONS\nPermission is hereby granted, free of charge, to any person obtaining\na copy of the Font Software, to use, study, copy, merge, embed, modify,\nredistribute, and sell modified and unmodified copies of the Font\nSoftware, subject to the following conditions:\n\n1) Neither the Font Software nor any of its individual components,\nin Original or Modified Versions, may be sold by itself.\n\n2) Original or Modified Versions of the Font Software may be bundled,\nredistributed and/or sold with any software, provided that each copy\ncontains the above copyright notice and this license. These can be\nincluded either as stand-alone text files, human-readable headers or\nin the appropriate machine-readable metadata fields within text or\nbinary files as long as those fields can be easily viewed by the user.\n\n3) No Modified Version of the Font Software may use the Reserved Font\nName(s) unless explicit written permission is granted by the corresponding\nCopyright Holder. This restriction only applies to the primary font name as\npresented to the users.\n\n4) The name(s) of the Copyright Holder(s) or the Author(s) of the Font\nSoftware shall not be used to promote, endorse or advertise any\nModified Version, except to acknowledge the contribution(s) of the\nCopyright Holder(s) and the Author(s) or with their explicit written\npermission.\n\n5) The Font Software, modified or unmodified, in part or in whole,\nmust be distributed entirely under this license, and must not be\ndistributed under any other license. The requirement for fonts to\nremain under this license does not apply to any document created\nusing the Font Software.\n\nTERMINATION\nThis license becomes null and void if any of the above conditions are\nnot met.\n\nDISCLAIMER\nTHE FONT SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND,\nEXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF\nMERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT\nOF COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL THE\nCOPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,\nINCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL\nDAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING\nFROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM\nOTHER DEALINGS IN THE FONT SOFTWARE.\n",
+              "collapsed": true,
+              "height": 320
+            }
+          ]
+        },
+        {
+          "id": "9a08fa70-1501-5456-bfeb-313837679a19",
+          "kind": "audio",
+          "x": 650,
+          "y": 788,
+          "width": 590,
+          "height": 100,
+          "assetId": "49aeb8ec-cf12-594d-884d-22fdd490188e",
+          "title": "Звук места · из исходного видео / CC0"
+        },
+        {
+          "id": "07131f19-677f-52b7-bd55-b4dccbcdfa0d",
+          "kind": "note",
+          "x": 0,
+          "y": 1020,
+          "content": "03  /  ФОТОАЛЬБОМ",
+          "width": 580,
+          "fontSize": 18,
+          "lineHeight": 1.3,
+          "fill": "#b6c9c9"
+        },
+        {
+          "id": "5edef365-db6d-5ee5-9b10-c50a4515adaf",
+          "kind": "image",
+          "x": 0,
+          "y": 1070,
+          "width": 760,
+          "height": 430.5,
+          "assetId": "16a1ef6a-8d83-5627-8803-0b5321d00ada",
+          "title": "Пейзаж перед бурей · CC0"
+        },
+        {
+          "id": "67de0e8a-a39b-5182-a767-45afb94245fc",
+          "kind": "image",
+          "x": 800,
+          "y": 1070,
+          "width": 440,
+          "height": 247.5,
+          "assetId": "0a6db2f4-4ad9-5bfa-8a93-6b99fee4c4cd",
+          "title": "Кадр из видео гейзера · CC0"
+        },
+        {
+          "id": "14930338-7bf3-53a7-80be-a98124ebf2a1",
+          "kind": "note",
+          "x": 800,
+          "y": 1350,
+          "content": "Места остаются рядом.\nДаже когда поездка закончилась.",
+          "width": 440,
+          "fontSize": 30,
+          "lineHeight": 1.3,
+          "fontFamily": "AtlasFont-856b422f-bb44-5752-ac39-1e24067b6205",
+          "fill": "#eef5f3"
+        },
+        {
+          "id": "720627a2-0e53-55ab-8602-e6655f8bc953",
+          "kind": "link",
+          "x": 0,
+          "y": 1540,
+          "width": 590,
+          "height": 110,
+          "title": "Источник видео и фотографий",
+          "url": "https://commons.wikimedia.org/wiki/File:Geisir.webm"
+        },
+        {
+          "id": "09a307bd-2e08-5790-b6ce-58811545e094",
+          "kind": "note",
+          "x": 650,
+          "y": 1560,
+          "content": "Учебный альбом · маршрут и записи вымышлены",
+          "width": 580,
+          "fontSize": 17,
+          "lineHeight": 1.3,
+          "fill": "#90a9af"
+        }
+      ],
+      "theme": {
+        "background": "#142630",
+        "pattern": "none",
+        "fontFamily": "Noto Sans",
+        "textColor": "#edf4f5",
+        "glassPanels": true,
+        "bookmarks": [
+          {
+            "id": "257d687b-3fdb-567d-af64-953c760ad8a6",
+            "name": "01 · Обложка",
+            "camera": {
+              "x": 95,
+              "y": 18,
+              "scale": 0.62
+            }
+          },
+          {
+            "id": "c4242f36-9677-5e5c-8f42-e038e1a394b2",
+            "name": "02 · Фотоальбом",
+            "camera": {
+              "x": 95,
+              "y": -610,
+              "scale": 0.62
+            }
+          }
+        ]
+      },
+      "camera": {
+        "x": 95,
+        "y": 18,
+        "scale": 0.62
+      }
+    }
+  },
+  {
+    "country_id": "578",
+    "scene": {
+      "schemaVersion": 5,
+      "items": [
+        {
+          "id": "6a2513bd-b542-52a9-83ee-f3ba6bc8d6a4",
+          "kind": "note",
+          "x": 40,
+          "y": 30,
+          "content": "ЗИМНЯЯ ПАЛИТРА  /  МАТЕРИАЛЫ",
+          "width": 580,
+          "fontSize": 16,
+          "lineHeight": 1.3,
+          "fill": "#e1edf4"
+        },
+        {
+          "id": "7c3b7b3b-da1d-5ea6-bfc5-9a9a06e9a892",
+          "kind": "rectangle",
+          "x": 620,
+          "y": 345,
+          "width": 1160,
+          "height": 500,
+          "fill": "#6f8699",
+          "strokeWidth": 0,
+          "cornerRadius": 40,
+          "glass": {
+            "enabled": true,
+            "blur": 16,
+            "tint": "#d7ecfc",
+            "opacity": 0.18
+          },
+          "locked": true
+        },
+        {
+          "id": "600ea3a2-390c-570f-b731-4a6e43b6186c",
+          "kind": "note",
+          "x": 95,
+          "y": 160,
+          "content": "Меньше шума.\nБольше света.",
+          "width": 760,
+          "fontSize": 76,
+          "lineHeight": 1.3,
+          "fontFamily": "AtlasFont-856b422f-bb44-5752-ac39-1e24067b6205",
+          "glass": {
+            "enabled": true,
+            "blur": 10,
+            "tint": "#e2f2fa",
+            "opacity": 0.27
+          },
+          "shimmer": {
+            "enabled": true,
+            "intensity": 0.65,
+            "speed": 0.65,
+            "color": "#ffffff"
+          }
+        },
+        {
+          "id": "681db3d7-f21d-535d-92c8-e33115611579",
+          "kind": "circle",
+          "x": 1030,
+          "y": 330,
+          "scaleX": 1.55,
+          "scaleY": 1.55,
+          "fill": "#91afc8",
+          "glass": {
+            "enabled": true,
+            "blur": 10,
+            "tint": "#e2f2fa",
+            "opacity": 0.27
+          },
+          "shimmer": {
+            "enabled": true,
+            "intensity": 0.65,
+            "speed": 0.65,
+            "color": "#ffffff"
+          }
+        },
+        {
+          "id": "c140096b-da13-5bcb-8cef-533304dbafc8",
+          "kind": "star",
+          "x": 1050,
+          "y": 520,
+          "fill": "#f0dfb1",
+          "stroke": "#d0b884",
+          "scaleX": 0.8,
+          "scaleY": 0.8,
+          "shimmer": {
+            "enabled": true,
+            "intensity": 0.65,
+            "speed": 0.65,
+            "color": "#ffffff"
+          }
+        },
+        {
+          "id": "205addfa-4412-5bde-9a83-ba1aafc9ef75",
+          "kind": "note",
+          "x": 100,
+          "y": 475,
+          "content": "Снежное переливание, стеклянные буквы\nи немного тёплого цвета среди холодных оттенков.",
+          "width": 730,
+          "fontSize": 24,
+          "lineHeight": 1.3,
+          "fill": "#f1f6fb"
+        },
+        {
+          "id": "f79d2c09-641a-50db-8e9d-9cc04e36f7a6",
+          "kind": "note",
+          "x": 42,
+          "y": 650,
+          "content": "СВОЯ ПАЛИТРА ДЛЯ КАЖДОЙ СТРАНЫ",
+          "width": 580,
+          "fontSize": 16,
+          "lineHeight": 1.3,
+          "fill": "#dce9f0"
+        },
+        {
+          "id": "89acca32-4ee4-59a8-9cb1-74c90782d438",
+          "kind": "line",
+          "x": 40,
+          "y": 706,
+          "points": [0, 0, 1160, 0],
+          "stroke": "#bdcfdb",
+          "opacity": 0.6,
+          "strokeWidth": 1
+        }
+      ],
+      "theme": {
+        "background": "#526a80",
+        "pattern": "none",
+        "fontFamily": "Noto Sans",
+        "textColor": "#edf4f5",
+        "backgroundType": "gradient",
+        "secondary": "#a5b7c8",
+        "angle": 125,
+        "glassPanels": true,
+        "shimmer": {
+          "enabled": true,
+          "color": "#ffffff",
+          "speed": 0.6,
+          "intensity": 0.7
+        }
+      },
+      "camera": {
+        "x": 95,
+        "y": 18,
+        "scale": 0.62
+      }
+    }
+  },
+  {
+    "country_id": "392",
+    "scene": {
+      "schemaVersion": 5,
+      "items": [
+        {
+          "id": "dd151404-79ea-51f9-b473-e1b418c137d2",
+          "kind": "note",
+          "x": 45,
+          "y": 30,
+          "content": "ЯПОНИЯ  /  БЛОКНОТ ИДЕЙ",
+          "width": 580,
+          "fontSize": 16,
+          "lineHeight": 1.3,
+          "fill": "#81715b"
+        },
+        {
+          "id": "37745633-d5fa-5e9a-92ee-f8859d46bccd",
+          "kind": "note",
+          "x": 45,
+          "y": 95,
+          "content": "Киото: маленькие открытия\nИдея путешествия, которую можно дополнять постепенно.\nОдин день — одно место, которое хочется запомнить.",
+          "width": 1140,
+          "fontSize": 38,
+          "lineHeight": 1.3,
+          "fontFamily": "AtlasFont-856b422f-bb44-5752-ac39-1e24067b6205",
+          "fill": "#382f27",
+          "richText": [
+            {
+              "text": "Киото: "
+            },
+            {
+              "text": "маленькие открытия",
+              "bold": true
+            },
+            {
+              "text": "\nИдея путешествия, которую можно дополнять постепенно.\n"
+            },
+            {
+              "text": "Один день — одно место",
+              "italic": true
+            },
+            {
+              "text": ", которое хочется запомнить."
+            }
+          ]
+        },
+        {
+          "id": "e1e8f824-cd2d-5a3a-a347-37a9e43c9cca",
+          "kind": "table",
+          "x": 45,
+          "y": 345,
+          "title": "Маршрут · идея путешествия",
+          "table": {
+            "cells": [
+              [
+                {
+                  "text": "Коллекция идей"
+                },
+                {
+                  "text": ""
+                },
+                {
+                  "text": ""
+                }
+              ],
+              [
+                {
+                  "text": "Утро"
+                },
+                {
+                  "text": "Прогулка"
+                },
+                {
+                  "text": "Заметить детали"
+                }
+              ],
+              [
+                {
+                  "text": "День"
+                },
+                {
+                  "text": "Небольшое кафе"
+                },
+                {
+                  "text": "Записать впечатления"
+                }
+              ],
+              [
+                {
+                  "text": "Вечер"
+                },
+                {
+                  "text": "Фотоальбом"
+                },
+                {
+                  "text": "Выбрать любимый кадр"
+                }
+              ]
+            ],
+            "columnWidths": [140, 360, 520],
+            "rowHeights": [48, 48, 48, 48],
+            "header": true,
+            "borderColor": "#d6d1c2",
+            "background": "#f5f1e7",
+            "color": "#253a40",
+            "borderWidth": 1,
+            "fontSize": 22,
+            "padding": 12,
+            "radius": 12,
+            "headerFill": "#e2d6bc",
+            "merges": [
+              {
+                "row": 0,
+                "column": 0,
+                "rows": 1,
+                "columns": 3
+              }
+            ]
+          }
+        },
+        {
+          "id": "d24371f5-04a5-5e5a-acfd-f5b2c337922f",
+          "kind": "disclosure",
+          "x": 45,
+          "y": 610,
+          "width": 1020,
+          "title": "Ещё несколько мыслей",
+          "sections": [
+            {
+              "id": "058b0f78-713e-5211-b327-0f14d74e3d60",
+              "title": "Истории, которые стоит сохранить",
+              "content": "Здесь могут быть цитаты, впечатления, планы и ссылки на источники. Раскрывающиеся разделы помогают оставить холст спокойным и понятным.",
+              "collapsed": false,
+              "height": 110
+            },
+            {
+              "id": "705537d2-2e78-5b58-952f-cc059ce47d40",
+              "title": "Отложенные идеи",
+              "content": "Оставить место для спонтанной прогулки.\nДобавить свои фотографии после поездки.",
+              "collapsed": true,
+              "height": 122
+            }
+          ]
+        },
+        {
+          "id": "dedeb892-61ab-55aa-a3ba-697c8cc6f7a7",
+          "kind": "stroke",
+          "x": 55,
+          "y": 290,
+          "points": [0, 0, 150, -5, 300, 2, 480, -4],
+          "stroke": "#bd9670",
+          "strokeWidth": 5,
+          "tension": 0.4
+        }
+      ],
+      "theme": {
+        "background": "#f2ede3",
+        "pattern": "none",
+        "fontFamily": "AtlasFont-856b422f-bb44-5752-ac39-1e24067b6205",
+        "textColor": "#382f27",
+        "glassPanels": false,
+        "guides": [
+          {
+            "id": "2c7aeb6e-d098-5509-8009-dab5846b1f22",
+            "axis": "x",
+            "value": 45
+          }
+        ],
+        "rulers": true
+      },
+      "camera": {
+        "x": 95,
+        "y": 18,
+        "scale": 0.62
+      }
+    }
+  }
+]

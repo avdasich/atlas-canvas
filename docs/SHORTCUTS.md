@@ -1,3 +1,5 @@
+[English](en/SHORTCUTS.md)
+
 # Горячие клавиши
 
 [Главная](../README.md) · [Руководство](USER_GUIDE.md)

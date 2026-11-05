@@ -1,0 +1,80 @@
+name: Build desktop packages
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Commit or ref to build
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS Intel
+            os: macos-15-intel
+            target: x86_64-apple-darwin
+            bundles: app,dmg
+            platform: macOS-Intel
+          - name: macOS Apple Silicon
+            os: macos-15
+            target: aarch64-apple-darwin
+            bundles: app,dmg
+            platform: macOS-Apple-Silicon
+          - name: Windows x64
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
+            bundles: nsis
+            platform: Windows-x64
+          - name: Linux x64
+            os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            bundles: deb,appimage
+            platform: Linux-x64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    env:
+      APPIMAGE_EXTRACT_AND_RUN: '1'
+      # Avoid Finder/AppleScript styling on headless macOS runners.
+      TAURI_BUNDLER_DMG_IGNORE_CI: 'false'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - name: Install Linux prerequisites
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev libfuse2 patchelf
+      - run: npm ci
+      - run: node scripts/check-version.mjs
+      - run: npm run format:check
+      - run: npm test
+      - run: npm run demo:check
+      - run: cargo test --locked --manifest-path src-tauri/Cargo.toml
+      - run: npm run notices
+      - name: Build native packages
+        run: npm run tauri build -- --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
+      - name: Give downloads clear platform names
+        run: node scripts/package-desktop.mjs ${{ matrix.target }} ${{ matrix.platform }}
+      - uses: actions/upload-artifact@v7
+        with:
+          name: Atlas-Canvas-${{ matrix.platform }}
+          if-no-files-found: error
+          retention-days: 14
+          path: release-assets/*

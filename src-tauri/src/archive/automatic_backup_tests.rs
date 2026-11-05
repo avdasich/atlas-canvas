@@ -118,19 +118,19 @@ fn orphaned_auto_temps_are_removed_before_the_hourly_skip_without_touching_other
     let (done_tx, done_rx) = mpsc::channel();
     let worker_source = source.clone();
     let jobs = AutomaticBackups::default();
-    let running = Arc::clone(&jobs.running);
+    let schedule = Arc::clone(&jobs.schedule);
     assert!(jobs.spawn(
         move || {
-            assert!(running.load(Ordering::Acquire));
+            assert!(schedule.lock().unwrap().running);
             let outcome = automatic_backup_using(
                 &worker_source,
                 |_, _| panic!("the latest backup is still within the hourly interval"),
                 |path| fs::remove_file(path),
             );
             done_tx.send(outcome).unwrap();
-            Ok(())
+            Ok(None)
         },
-        |_| panic!("the backup must not fail"),
+        |_, _| panic!("the backup must not fail"),
     ));
     assert_eq!(
         done_rx
@@ -452,23 +452,115 @@ fn scheduler_returns_without_waiting_allows_only_one_worker_and_reports_failure(
             release_rx.recv_timeout(Duration::from_secs(5)).unwrap();
             Err("backup write failed".into())
         },
-        move |error| error_tx.send(error).unwrap(),
+        move |kind, error| error_tx.send((kind, error)).unwrap(),
     ));
     started_rx.recv_timeout(Duration::from_secs(5)).unwrap();
-    assert!(!jobs.spawn(|| panic!("a second worker must not start"), |_| {}));
+    assert!(!jobs.spawn(|| panic!("a second worker must not start"), |_, _| {}));
     release_tx.send(()).unwrap();
     assert_eq!(
         error_rx.recv_timeout(Duration::from_secs(5)).unwrap(),
-        "backup write failed"
+        (BackupNotice::Error, "backup write failed".into())
     );
-    let (next_tx, next_rx) = mpsc::channel();
-    assert!(jobs.spawn(
-        || Err("retry is allowed".into()),
-        move |error| next_tx.send(error).unwrap()
+    assert!(!jobs.schedule.lock().unwrap().running);
+    assert!(!jobs.spawn(
+        || panic!("the error backoff must block an immediate retry"),
+        |_, _| {}
     ));
+}
+
+#[test]
+fn scheduler_throttles_checks_for_one_minute_without_extending_the_deadline() {
+    let jobs = AutomaticBackups::default();
+    let start = Instant::now();
+    let permit = jobs.try_start(start).unwrap();
+    assert!(
+        jobs.try_start(start + Duration::from_secs(120)).is_none(),
+        "one worker at a time"
+    );
+    assert_eq!(permit.finish(start, Ok(None)), None);
+    for seconds in [0, 1, 30, 59] {
+        assert!(
+            jobs.try_start(start + Duration::from_secs(seconds))
+                .is_none()
+        );
+    }
+    let permit = jobs.try_start(start + Duration::from_secs(60)).unwrap();
     assert_eq!(
-        next_rx.recv_timeout(Duration::from_secs(5)).unwrap(),
-        "retry is allowed"
+        permit.finish(start + Duration::from_secs(60), Ok(None)),
+        None
+    );
+    assert!(!jobs.spawn(|| panic!("a throttled worker must not run"), |_, _| {}));
+}
+
+#[test]
+fn scheduler_waits_an_hour_after_failure_and_resets_backoff_after_success() {
+    let jobs = AutomaticBackups::default();
+    let start = Instant::now();
+    let finished = start + Duration::from_secs(120);
+    let permit = jobs.try_start(start).unwrap();
+    assert_eq!(
+        permit.finish(finished, Err("disk full".into())),
+        Some((BackupNotice::Error, "disk full".into()))
+    );
+    for seconds in [0, 1, 60, 3599] {
+        assert!(
+            jobs.try_start(finished + Duration::from_secs(seconds))
+                .is_none()
+        );
+    }
+    let retry = finished + Duration::from_secs(3600);
+    let permit = jobs.try_start(retry).unwrap();
+    assert_eq!(permit.finish(retry, Ok(None)), None);
+    assert!(jobs.schedule.lock().unwrap().retry_after.is_none());
+    assert!(jobs.try_start(retry + Duration::from_secs(59)).is_none());
+    assert!(jobs.try_start(retry + Duration::from_secs(60)).is_some());
+}
+
+#[test]
+fn cleanup_warnings_do_not_trigger_the_hourly_failure_backoff() {
+    let jobs = AutomaticBackups::default();
+    let start = Instant::now();
+    let permit = jobs.try_start(start).unwrap();
+    assert_eq!(
+        permit.finish(start, Ok(Some("locked temporary file".into()))),
+        Some((BackupNotice::CleanupWarning, "locked temporary file".into()))
+    );
+    assert!(jobs.schedule.lock().unwrap().retry_after.is_none());
+    assert!(jobs.try_start(start + Duration::from_secs(59)).is_none());
+    assert!(jobs.try_start(start + Duration::from_secs(60)).is_some());
+}
+
+#[test]
+fn identical_notices_are_shown_once_per_session_and_new_text_is_reported() {
+    for kind in [BackupNotice::CleanupWarning, BackupNotice::Error] {
+        let jobs = AutomaticBackups::default();
+        let start = Instant::now();
+        for (index, (message, expected)) in [
+            ("first", true),
+            ("first", false),
+            ("new", true),
+            ("first", false),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let now = start + Duration::from_secs(index as u64 * 3600);
+            let result = match kind {
+                BackupNotice::Error => Err(message.into()),
+                BackupNotice::CleanupWarning => Ok(Some(message.into())),
+            };
+            let notice = jobs.try_start(now).unwrap().finish(now, result);
+            assert_eq!(notice, expected.then(|| (kind, message.into())));
+        }
+    }
+    // Restarting the application starts a new deduplication session.
+    let jobs = AutomaticBackups::default();
+    let now = Instant::now();
+    assert!(
+        jobs.try_start(now)
+            .unwrap()
+            .finish(now, Err("first".into()))
+            .is_some()
     );
 }
 

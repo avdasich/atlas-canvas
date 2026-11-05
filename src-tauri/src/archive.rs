@@ -13,11 +13,8 @@ use std::{
     fs,
     io::{Read, Write},
     path::{Path, PathBuf},
-    sync::{
-        Arc, Mutex,
-        atomic::{AtomicBool, Ordering},
-    },
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    sync::{Arc, Mutex},
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 use tauri::{AppHandle, Manager, State};
 use tauri_plugin_dialog::DialogExt;
@@ -58,38 +55,100 @@ pub struct Imports(pub Mutex<HashMap<String, Staged>>);
 pub(crate) const AUTOMATIC_BACKUP_LIMIT: usize = 5;
 const AUTOMATIC_BACKUP_INTERVAL: Duration = Duration::from_secs(3600);
 
-#[derive(Default)]
-pub struct AutomaticBackups {
-    running: Arc<AtomicBool>,
+const AUTOMATIC_BACKUP_CHECK_INTERVAL: Duration = Duration::from_secs(60);
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+enum BackupNotice {
+    Error,
+    CleanupWarning,
 }
 
-struct BackupPermit(Arc<AtomicBool>);
+impl BackupNotice {
+    fn event(self) -> &'static str {
+        match self {
+            Self::Error => "atlas-backup-error",
+            Self::CleanupWarning => "atlas-backup-cleanup-warning",
+        }
+    }
+}
+
+#[derive(Default)]
+struct BackupSchedule {
+    running: bool,
+    last_attempt: Option<Instant>,
+    retry_after: Option<Instant>,
+    shown_notices: BTreeSet<(BackupNotice, String)>,
+}
+
+#[derive(Default)]
+pub struct AutomaticBackups {
+    schedule: Arc<Mutex<BackupSchedule>>,
+}
+
+struct BackupPermit(Arc<Mutex<BackupSchedule>>);
+
+impl BackupPermit {
+    fn finish(
+        self,
+        now: Instant,
+        result: Result<Option<String>>,
+    ) -> Option<(BackupNotice, String)> {
+        let mut schedule = self.0.lock().unwrap_or_else(|error| error.into_inner());
+        let notice = match result {
+            Err(error) => {
+                // Wait a full hour after failure, including when archiving itself took a long time.
+                schedule.retry_after = Some(now + AUTOMATIC_BACKUP_INTERVAL);
+                Some((BackupNotice::Error, error))
+            }
+            Ok(warning) => {
+                schedule.retry_after = None;
+                warning.map(|warning| (BackupNotice::CleanupWarning, warning))
+            }
+        };
+        notice.filter(|notice| schedule.shown_notices.insert(notice.clone()))
+    }
+}
 
 impl Drop for BackupPermit {
     fn drop(&mut self) {
-        self.0.store(false, Ordering::Release);
+        self.0
+            .lock()
+            .unwrap_or_else(|error| error.into_inner())
+            .running = false;
     }
 }
 
 impl AutomaticBackups {
+    fn try_start(&self, now: Instant) -> Option<BackupPermit> {
+        let mut schedule = self
+            .schedule
+            .lock()
+            .unwrap_or_else(|error| error.into_inner());
+        if schedule.running
+            || schedule.last_attempt.is_some_and(|previous| {
+                now.saturating_duration_since(previous) < AUTOMATIC_BACKUP_CHECK_INTERVAL
+            })
+            || schedule.retry_after.is_some_and(|deadline| now < deadline)
+        {
+            return None;
+        }
+        schedule.running = true;
+        schedule.last_attempt = Some(now);
+        Some(BackupPermit(Arc::clone(&self.schedule)))
+    }
+
     fn spawn(
         &self,
-        backup: impl FnOnce() -> Result<()> + Send + 'static,
-        report_error: impl FnOnce(String) + Send + 'static,
+        backup: impl FnOnce() -> Result<Option<String>> + Send + 'static,
+        report_notice: impl FnOnce(BackupNotice, String) + Send + 'static,
     ) -> bool {
-        if self
-            .running
-            .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
-            .is_err()
-        {
+        let Some(permit) = self.try_start(Instant::now()) else {
             return false;
-        }
-        let permit = BackupPermit(Arc::clone(&self.running));
+        };
         tauri::async_runtime::spawn_blocking(move || {
             let result = backup();
-            drop(permit);
-            if let Err(error) = result {
-                report_error(error);
+            if let Some((kind, message)) = permit.finish(Instant::now(), result) {
+                report_notice(kind, message);
             }
         });
         true
@@ -98,18 +157,11 @@ impl AutomaticBackups {
 
 pub(crate) fn schedule_automatic_backup(app: AppHandle, dir: PathBuf) {
     let worker_app = app.clone();
-    let warning_app = app.clone();
     app.state::<AutomaticBackups>().spawn(
-        move || {
-            if let Some(warning) = automatic_backup(&dir)? {
-                use tauri::Emitter;
-                let _ = warning_app.emit("atlas-backup-cleanup-warning", warning);
-            }
-            Ok(())
-        },
-        move |error| {
+        move || automatic_backup(&dir),
+        move |kind, message| {
             use tauri::Emitter;
-            let _ = worker_app.emit("atlas-backup-error", error);
+            let _ = worker_app.emit(kind.event(), message);
         },
     );
 }

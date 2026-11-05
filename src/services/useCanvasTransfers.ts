@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { placeItem, type Bounds, type TextSize } from '../domain/geometry';
 import type { CanvasItem, ItemKind, Scene, Theme } from '../domain/scene';
 import { validUrl } from '../domain/scene';
+import { t as tr } from '../i18n/index';
 import { repository } from './SceneRepository';
 import { exportCanvas } from './exportCanvas';
 export type LinkKind = 'link' | 'image' | 'video' | 'audio';
@@ -53,7 +54,7 @@ export function useCanvasTransfers(options: TransferOptions) {
         setDownloadProgress(
           e.payload.total
             ? `${Math.min(100, Math.round((e.payload.bytes / e.payload.total) * 100))}%`
-            : `${(e.payload.bytes / 1048576).toFixed(1)} МиБ`,
+            : tr('{0} МиБ', (e.payload.bytes / 1048576).toFixed(1)),
         );
     }).then((fn) => {
       if (disposed) fn();
@@ -69,13 +70,13 @@ export function useCanvasTransfers(options: TransferOptions) {
     setBusy(true);
     setPhotoImporting(true);
     photoCancel.current = false;
-    setMessage('Импорт фотографий…');
+    setMessage(tr('Импорт фотографий…'));
     let next = [...items];
     const ids: string[] = [];
     const errors: string[] = [];
     for (const file of files) {
       if (photoCancel.current) break;
-      setMessage(`Импорт фото: ${ids.length + errors.length + 1} / ${files.length}`);
+      setMessage(tr('Импорт фото: {0} / {1}', ids.length + errors.length + 1, files.length));
       try {
         const { assetId, width, height } = await repository.importImage(file);
         const ratio = Math.min(1, 420 / width, 340 / height);
@@ -109,25 +110,29 @@ export function useCanvasTransfers(options: TransferOptions) {
     }
     setMessage(
       errors.length
-        ? `Импортировано: ${ids.length}. ${errors.join('; ')}`
-        : `${photoCancel.current ? 'Импорт остановлен. ' : ''}Фотографий скопировано: ${ids.length}.`,
+        ? tr('Импортировано: {0}. {1}', ids.length, errors.join('; '))
+        : tr(
+            '{0}Фотографий скопировано: {1}.',
+            photoCancel.current ? 'Импорт остановлен. ' : '',
+            ids.length,
+          ),
     );
     setBusy(false);
     setPhotoImporting(false);
   }
   async function downloadUrl(linkKind: LinkKind, linkUrl: string, linkTitle: string) {
     if (!isTauri()) {
-      setMessage('Загрузка файлов доступна в настольном приложении.');
+      setMessage(tr('Загрузка файлов доступна в настольном приложении.'));
       return;
     }
     if (!validUrl(linkUrl)) {
-      setMessage('Введите полный http/https адрес');
+      setMessage(tr('Введите полный http/https адрес'));
       return;
     }
     setBusy(true);
     setMessage('');
     downloadId.current = crypto.randomUUID();
-    setDownloadProgress('Подключение…');
+    setDownloadProgress(tr('Подключение…'));
     try {
       const imported = await invoke<{ assetId: string; title: string }>('import_url', {
         url: linkUrl,
@@ -151,7 +156,7 @@ export function useCanvasTransfers(options: TransferOptions) {
       setSelected([item.id]);
       reveal(item);
       closeLinkDialog();
-      setMessage('Медиа загружено в папку приложения и доступно офлайн.');
+      setMessage(tr('Медиа загружено в папку приложения и доступно офлайн.'));
     } catch (e) {
       setMessage(String(e));
     } finally {
@@ -165,7 +170,7 @@ export function useCanvasTransfers(options: TransferOptions) {
     try {
       const scene = await getSavedScene();
       const path = await exportCanvas(scene, viewport(), region, format);
-      setMessage(path ? `Экспорт сохранён: ${path}` : 'Экспорт отменён');
+      setMessage(path ? tr('Экспорт сохранён: {0}', path) : tr('Экспорт отменён'));
     } catch (e) {
       setMessage(String(e));
     } finally {
@@ -187,7 +192,7 @@ export function useCanvasTransfers(options: TransferOptions) {
   async function replaceAsset(item: CanvasItem, file?: File) {
     setBusy(true);
     downloadId.current = crypto.randomUUID();
-    setDownloadProgress('Замена файла…');
+    setDownloadProgress(tr('Замена файла…'));
     try {
       const result =
         item.kind === 'image' && file
@@ -211,7 +216,7 @@ export function useCanvasTransfers(options: TransferOptions) {
               : i,
           ),
         );
-        setMessage('Файл заменён. Предыдущую версию можно вернуть через отмену.');
+        setMessage(tr('Файл заменён. Предыдущую версию можно вернуть через отмену.'));
       }
     } catch (e) {
       setMessage(String(e));
@@ -223,12 +228,12 @@ export function useCanvasTransfers(options: TransferOptions) {
   }
   async function importMedia(kind: 'video' | 'audio') {
     if (!isTauri()) {
-      setMessage('Импорт медиа доступен в настольном приложении.');
+      setMessage(tr('Импорт медиа доступен в настольном приложении.'));
       return;
     }
     setBusy(true);
     downloadId.current = crypto.randomUUID();
-    setDownloadProgress('Импорт файла…');
+    setDownloadProgress(tr('Импорт файла…'));
     try {
       const result = await invoke<{ assetId: string; title: string } | null>('import_media', {
         kind,

@@ -1,4 +1,5 @@
 import type { CanvasItem } from '../../../domain/scene';
+import { t as tr } from '../../../i18n/index';
 import Numeric from '../controls/NumericField';
 export default function TextProperties({
   item,
@@ -10,23 +11,25 @@ export default function TextProperties({
   return (
     <>
       <label className="property-field">
-        Фон заметки
+        {tr('Фон заметки')}
         <input
           type="color"
           value={item.textBackground ?? '#ffffff'}
           onChange={(e) => patch({ textBackground: e.target.value })}
         />
       </label>
-      <button onClick={() => patch({ textBackground: undefined })}>Прозрачный фон заметки</button>
+      <button onClick={() => patch({ textBackground: undefined })}>
+        {tr('Прозрачный фон заметки')}
+      </button>
       <Numeric
-        label="Размер шрифта"
+        label={tr('Размер шрифта')}
         value={item.fontSize ?? 26}
         min={6}
         max={400}
         onChange={(fontSize) => patch({ fontSize })}
       />
       <Numeric
-        label="Межстрочный интервал"
+        label={tr('Межстрочный интервал')}
         value={item.lineHeight ?? 1.3}
         min={0.5}
         max={5}
@@ -34,12 +37,12 @@ export default function TextProperties({
       />
       <div className="text-style-buttons">
         {[
-          ['bold', 'Ж'],
-          ['italic', 'К'],
+          ['bold', tr('Ж')],
+          ['italic', tr('К')],
         ].map(([style, label]) => (
           <button
             key={style}
-            aria-label={style === 'bold' ? 'Жирный' : 'Курсив'}
+            aria-label={style === 'bold' ? tr('Жирный') : tr('Курсив')}
             aria-pressed={item.fontStyle?.includes(style)}
             onClick={() => {
               const current = (item.fontStyle ?? '').split(' ').filter((s) => s !== 'normal');
@@ -59,19 +62,19 @@ export default function TextProperties({
             patch({ textDecoration: item.textDecoration === 'underline' ? '' : 'underline' })
           }
         >
-          Подчеркнуть
+          {tr('Подчеркнуть')}
         </button>
       </div>
       <label className="property-field">
-        Выравнивание
+        {tr('Выравнивание')}
         <select
-          aria-label="Выравнивание текста"
+          aria-label={tr('Выравнивание текста')}
           value={item.align ?? 'left'}
           onChange={(e) => patch({ align: e.target.value as CanvasItem['align'] })}
         >
-          <option value="left">Слева</option>
-          <option value="center">По центру</option>
-          <option value="right">Справа</option>
+          <option value="left">{tr('Слева')}</option>
+          <option value="center">{tr('По центру')}</option>
+          <option value="right">{tr('Справа')}</option>
         </select>
       </label>
     </>

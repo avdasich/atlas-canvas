@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { validateTable, type TableData } from '../../domain/scene';
 import { tableStyle, tableStyles, type TableStyle } from '../../domain/table';
+import { t as tr, translateMessage } from '../../i18n/index';
 import { usePreferences } from '../../services/usePreferences';
 type SavedStyle = { id: string; name: string; style: TableStyle; fontFamily?: string };
 function valid(value: unknown): value is SavedStyle[] {
@@ -54,18 +55,18 @@ export default function TableStyles({
     [name, setName] = useState('');
   return (
     <details>
-      <summary>Стили таблицы</summary>
+      <summary>{tr('Стили таблицы')}</summary>
       <div className="theme-presets">
         {tableStyles.map((p) => (
           <button key={p.name} onClick={() => apply(p.style)}>
-            {p.name}
+            {tr(p.name)}
           </button>
         ))}
       </div>
       <label className="property-field">
-        Название стиля
+        {tr('Название стиля')}
         <input
-          aria-label="Название стиля таблицы"
+          aria-label={tr('Название стиля таблицы')}
           value={name}
           maxLength={80}
           onChange={(e) => setName(e.target.value)}
@@ -81,22 +82,22 @@ export default function TableStyles({
           setName('');
         }}
       >
-        Сохранить стиль таблицы
+        {tr('Сохранить стиль таблицы')}
       </button>
       {saved.value.map((p) => (
         <div className="layer-row" key={p.id}>
           <button onClick={() => apply(p.style, p.fontFamily)}>{p.name}</button>
           <button
-            aria-label={`Удалить стиль ${p.name}`}
+            aria-label={tr('Удалить стиль {0}', p.name)}
             onClick={() => saved.update(saved.value.filter((v) => v.id !== p.id))}
           >
             ×
           </button>
         </div>
       ))}
-      {saved.error && <p role="alert">{saved.error}</p>}
+      {saved.error && <p role="alert">{translateMessage(saved.error)}</p>}
       <p className="panel-hint">
-        Стили меняют общую палитру. Индивидуальные цвета ячеек сохраняются.
+        {tr('Стили меняют общую палитру. Индивидуальные цвета ячеек сохраняются.')}
       </p>
     </details>
   );

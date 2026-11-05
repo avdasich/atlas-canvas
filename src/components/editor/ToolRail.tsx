@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import type { ItemKind, Theme } from '../../domain/scene';
+import { t as tr } from '../../i18n/index';
 import { shapeLabels, type EditorTool } from './editorTools';
 type Props = {
   theme: Theme;
@@ -31,25 +32,25 @@ export default function ToolRail({
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   return (
-    <nav className="tool-rail" aria-label="Инструменты">
+    <nav className="tool-rail" aria-label={tr('Инструменты')}>
       <button
-        title="Выбор (V). Перемещение холста — по пустому месту"
-        aria-label="Выбор"
+        title={tr('Выбор (V). Перемещение холста — по пустому месту')}
+        aria-label={tr('Выбор')}
         aria-pressed={tool === 'select'}
         onClick={() => onTool('select')}
       >
         ↖
       </button>
       <button
-        title="Текст (T)"
-        aria-label="Добавить текст"
+        title={tr('Текст (T)')}
+        aria-label={tr('Добавить текст')}
         disabled={busy}
         onClick={() => onAdd('note')}
       >
         T
       </button>
       <details className="shape-menu">
-        <summary title="Фигуры" aria-label="Фигуры">
+        <summary title={tr('Фигуры')} aria-label={tr('Фигуры')}>
           ◇
         </summary>
         <div>
@@ -59,7 +60,7 @@ export default function ToolRail({
               checked={theme.drawShapes ?? false}
               onChange={(e) => setTheme({ ...theme, drawShapes: e.target.checked })}
             />
-            Рисовать протягиванием
+            {tr('Рисовать протягиванием')}
           </label>
           <label className="check-field">
             <input
@@ -67,7 +68,7 @@ export default function ToolRail({
               checked={theme.repeatShape ?? false}
               onChange={(e) => setTheme({ ...theme, repeatShape: e.target.checked })}
             />
-            Оставлять инструмент активным
+            {tr('Оставлять инструмент активным')}
           </label>
           {shapeLabels.map(([kind, label]) => (
             <button
@@ -78,14 +79,14 @@ export default function ToolRail({
                 e.currentTarget.closest('details')?.removeAttribute('open');
               }}
             >
-              {label}
+              {tr(label)}
             </button>
           ))}
         </div>
       </details>
       <button
-        title="Карандаш (P/B)"
-        aria-label="Карандаш"
+        title={tr('Карандаш (P/B)')}
+        aria-label={tr('Карандаш')}
         aria-pressed={tool === 'pen'}
         onClick={() => {
           onTool('pen');
@@ -94,8 +95,8 @@ export default function ToolRail({
         ✎
       </button>
       <button
-        title="Ластик для штрихов"
-        aria-label="Ластик"
+        title={tr('Ластик для штрихов')}
+        aria-label={tr('Ластик')}
         aria-pressed={tool === 'eraser'}
         onClick={() => {
           onTool('eraser');
@@ -104,8 +105,8 @@ export default function ToolRail({
         ◩
       </button>
       <button
-        title="Добавить фотографию"
-        aria-label="Добавить фото"
+        title={tr('Добавить фотографию')}
+        aria-label={tr('Добавить фото')}
         disabled={busy}
         onClick={() => inputRef.current?.click()}
       >
@@ -123,35 +124,39 @@ export default function ToolRail({
           void onPhotos(files);
         }}
       />
-      <button title="Редактируемая таблица" aria-label="Добавить таблицу" onClick={() => onTable()}>
+      <button
+        title={tr('Редактируемая таблица')}
+        aria-label={tr('Добавить таблицу')}
+        onClick={() => onTable()}
+      >
         ▦
       </button>
       <button
-        title="Раскрывающиеся сноски"
-        aria-label="Добавить сноски"
+        title={tr('Раскрывающиеся сноски')}
+        aria-label={tr('Добавить сноски')}
         disabled={busy}
         onClick={() => onAdd('disclosure')}
       >
         ▸≡
       </button>
       <details className="shape-menu">
-        <summary aria-label="Медиа и ссылки">▶</summary>
+        <summary aria-label={tr('Медиа и ссылки')}>▶</summary>
         <div>
-          <button onClick={() => void onMedia('video')}>Видео с диска</button>
-          <button onClick={() => void onMedia('audio')}>Аудио с диска</button>
+          <button onClick={() => void onMedia('video')}>{tr('Видео с диска')}</button>
+          <button onClick={() => void onMedia('audio')}>{tr('Аудио с диска')}</button>
           <button
             onClick={() => {
               onLink();
             }}
           >
-            Ссылка или медиа по URL
+            {tr('Ссылка или медиа по URL')}
           </button>
         </div>
       </details>
       <div className="rail-divider" />
       <button
-        title="Удалить выбранное"
-        aria-label="Удалить"
+        title={tr('Удалить выбранное')}
+        aria-label={tr('Удалить')}
         disabled={!hasSelection || busy}
         onClick={onDelete}
       >

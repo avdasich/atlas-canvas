@@ -145,7 +145,7 @@ ${table(
 
 Letter commands follow physical keys and also work with a Cyrillic keyboard layout. While typing in a note or cell, shortcuts affect text rather than canvas objects. Press Esc to leave View mode.
 
-The same catalog appears in the app under **Свойства → Горячие клавиши · все ОС** (Properties → Shortcuts · all operating systems).
+The same catalog appears in the app under **Properties → Keyboard shortcuts · all systems**.
 
 <!-- Generated from src/domain/shortcuts.ts. Update: npm run docs:shortcuts. -->
 `;

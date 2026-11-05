@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { TableData } from '../../domain/scene';
 import { createTable } from '../../domain/table';
+import { t as tr } from '../../i18n/index';
 export default function TableCreationDialog({
   open,
   onClose,
@@ -31,11 +32,11 @@ export default function TableCreationDialog({
           }
         }}
       >
-        <h2>Новая таблица</h2>
+        <h2>{tr('Новая таблица')}</h2>
         <label>
-          Строки
+          {tr('Строки')}
           <input
-            aria-label="Количество строк"
+            aria-label={tr('Количество строк')}
             type="number"
             min={1}
             max={200}
@@ -45,9 +46,9 @@ export default function TableCreationDialog({
           />
         </label>
         <label>
-          Столбцы
+          {tr('Столбцы')}
           <input
-            aria-label="Количество столбцов"
+            aria-label={tr('Количество столбцов')}
             type="number"
             min={1}
             max={50}
@@ -58,9 +59,9 @@ export default function TableCreationDialog({
         </label>
         <div className="dialog-actions">
           <button type="button" onClick={() => onClose()}>
-            Отмена
+            {tr('Отмена')}
           </button>
-          <button type="submit">Создать таблицу</button>
+          <button type="submit">{tr('Создать таблицу')}</button>
         </div>
       </form>
     </div>

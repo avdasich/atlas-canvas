@@ -2,12 +2,20 @@
 
 # Change history
 
-## 0.4.1 — release preparation
+## 0.4.2
+
+- English and Russian interface with saved language selection; country IDs and canvas content stay unchanged.
+- Correct ad-hoc signing and integrity checks for macOS bundles.
+- Five installers and one checksum file in new releases; demo and guides are linked from the description.
+- Fixed the More menu appearing behind the canvas when glass panels are enabled.
+- Updated both documentation languages to use the new screenshots and Iceland cover.
+
+## 0.4.1
 
 - One draft with Intel Mac, Apple Silicon Mac, Windows x64 and Linux x64 packages: macOS DMG/ZIP, Windows NSIS, Linux DEB/AppImage, plus SHA-256 checksums.
 - Shared PR/release matrix with explicit architectures, version checks and refusal to overwrite a published release.
-- Public `.atlas` demo with three canvases, open photographs, MP4/WAV, an embedded font, import instructions and screenshot checklist.
-- English README, user guide, installation, shortcuts, development/release guides and screenshot instructions. Shared images and language links at the beginning.
+- Public `.atlas` demo with three canvases, open photographs, MP4/WAV, an embedded font, import instructions.
+- English README, user guide, installation, shortcuts, development and release guides. Shared images and language links at the beginning.
 - Production identifier, scene format 5 and SQLite user_version 2 preserved. No user-data changes.
 
 ## 0.4.0

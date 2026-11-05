@@ -67,7 +67,7 @@ jobs:
           pattern: Atlas-Canvas-*
           path: release-assets
           merge-multiple: true
-      - name: Add demo, instructions and checksums
+      - name: Verify downloads and add checksums
         run: node scripts/prepare-release.mjs
       - name: Create or update the draft without publishing
         run: node scripts/upload-release.mjs

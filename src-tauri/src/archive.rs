@@ -164,7 +164,7 @@ fn write_archive_with_operation(
     let mut preferences = BTreeMap::new();
     if country.is_none() {
         let mut q = conn
-            .prepare("SELECT key,json FROM preferences")
+            .prepare("SELECT key,json FROM preferences WHERE key IN ('map','themes','table-styles','editor')")
             .map_err(err)?;
         for row in q
             .query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))
@@ -436,7 +436,7 @@ pub async fn export_atlas(
         let picked = app
             .dialog()
             .file()
-            .set_title("Экспорт атласа")
+            .set_title(crate::language::text("Экспорт атласа", "Export atlas"))
             .set_file_name(format!("Atlas-{}.atlas", new_id()))
             .add_filter("Atlas Canvas", &["atlas"])
             .blocking_save_file();
@@ -467,7 +467,10 @@ pub async fn inspect_archive(
         let picked = handle
             .dialog()
             .file()
-            .set_title("Восстановить архив атласа")
+            .set_title(crate::language::text(
+                "Восстановить архив атласа",
+                "Restore atlas backup",
+            ))
             .add_filter("Atlas Canvas", &["atlas", "zip"])
             .blocking_pick_file();
         let Some(picked) = picked else {

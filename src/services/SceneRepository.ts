@@ -2,6 +2,7 @@ import { convertFileSrc, invoke, isTauri } from '@tauri-apps/api/core';
 import type { Country } from '../domain/countries';
 import { emptyScene, parseItems, parseScene, type Scene } from '../domain/scene';
 import { countries } from '../domain/world';
+import { t as tr } from '../i18n/index';
 import { rasterizeSvg } from './svg';
 
 export type LoadedScene = { scene: Scene; legacyKey?: string };
@@ -28,7 +29,7 @@ export function readLegacy(storage: Storage, country: Country): LoadedScene | nu
     nonempty.some((e) => JSON.stringify(e.items) !== JSON.stringify(nonempty[0].items))
   )
     throw new Error(
-      'Найдены разные старые холсты для одной страны. Перенос остановлен, исходники сохранены.',
+      tr('Найдены разные старые холсты для одной страны. Перенос остановлен, исходники сохранены.'),
     );
   const entry = nonempty[0] ?? entries[0];
   return entry ? { scene: { ...emptyScene(), items: entry.items }, legacyKey: entry.key } : null;
@@ -79,7 +80,7 @@ export class LocalSceneRepository implements SceneRepository {
       this.storage.setItem(sceneKey(country.id), raw);
     const verified = await this.load(country);
     if (verified.legacyKey || JSON.stringify(verified.scene) !== raw)
-      throw new Error('Проверка переноса не прошла. Старый холст сохранён.');
+      throw new Error(tr('Проверка переноса не прошла. Старый холст сохранён.'));
     // Intentionally retain the original localStorage entry, including after verification.
   }
   async filled(): Promise<string[]> {
@@ -107,11 +108,13 @@ export class LocalSceneRepository implements SceneRepository {
     if (file.type === 'image/svg+xml' || /\.svg$/i.test(file.name)) file = await rasterizeSvg(file);
     if (!this.native)
       throw new Error(
-        'Импорт фотографий доступен в настольном приложении: оригиналы сохраняются в его папке данных.',
+        tr(
+          'Импорт фотографий доступен в настольном приложении: оригиналы сохраняются в его папке данных.',
+        ),
       );
-    if (file.size > 50 * 1024 * 1024) throw new Error('Размер изображения превышает 50 МБ.');
+    if (file.size > 50 * 1024 * 1024) throw new Error(tr('Размер изображения превышает 50 МБ.'));
     if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type))
-      throw new Error('Поддерживаются JPEG, PNG, WebP и GIF.');
+      throw new Error(tr('Поддерживаются JPEG, PNG, WebP и GIF.'));
     const bitmap = await createImageBitmap(file);
     try {
       const scale = Math.min(1, 1400 / Math.max(bitmap.width, bitmap.height));
@@ -119,11 +122,11 @@ export class LocalSceneRepository implements SceneRepository {
       canvas.width = Math.max(1, Math.round(bitmap.width * scale));
       canvas.height = Math.max(1, Math.round(bitmap.height * scale));
       const context = canvas.getContext('2d');
-      if (!context) throw new Error('Не удалось подготовить изображение.');
+      if (!context) throw new Error(tr('Не удалось подготовить изображение.'));
       context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
       const preview = await new Promise<Blob>((resolve, reject) =>
         canvas.toBlob(
-          (blob) => (blob ? resolve(blob) : reject(new Error('Не удалось создать превью'))),
+          (blob) => (blob ? resolve(blob) : reject(new Error(tr('Не удалось создать превью')))),
           'image/png',
         ),
       );

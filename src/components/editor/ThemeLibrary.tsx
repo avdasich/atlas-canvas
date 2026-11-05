@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { validThemePresets, type ThemePreset } from '../../domain/appearance';
 import type { Theme } from '../../domain/scene';
+import { t as tr } from '../../i18n/index';
 import { usePreferences } from '../../services/usePreferences';
 export default function ThemeLibrary({
   theme,
@@ -13,11 +14,11 @@ export default function ThemeLibrary({
   const [name, setName] = useState('');
   return (
     <details className="theme-library">
-      <summary>Мои оформления</summary>
+      <summary>{tr('Мои оформления')}</summary>
       <label className="property-field">
-        Название оформления
+        {tr('Название оформления')}
         <input
-          aria-label="Название оформления"
+          aria-label={tr('Название оформления')}
           maxLength={80}
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -50,7 +51,7 @@ export default function ThemeLibrary({
           setName('');
         }}
       >
-        Сохранить оформление
+        {tr('Сохранить оформление')}
       </button>
       {presets.error && <p role="alert">{presets.error}</p>}
       {presets.value.map((p) => (
@@ -68,7 +69,7 @@ export default function ThemeLibrary({
             {p.name}
           </button>
           <button
-            aria-label={`Удалить оформление ${p.name}`}
+            aria-label={tr('Удалить оформление {0}', p.name)}
             onClick={() => presets.update(presets.value.filter((v) => v.id !== p.id))}
           >
             ×

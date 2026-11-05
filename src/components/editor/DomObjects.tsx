@@ -6,6 +6,7 @@ import type { SectionDraft } from '../../domain/drafts';
 import { dimensions } from '../../domain/geometry';
 import type { Camera, CanvasItem, TableData } from '../../domain/scene';
 import { coveredCell, mergeAt } from '../../domain/table';
+import { t as tr, translateMessage } from '../../i18n/index';
 import DisclosureCard from './DisclosureCard';
 export type CellSelection = { row: number; column: number };
 type Props = {
@@ -145,14 +146,14 @@ export default function DomObject({
       >
         {item.title ??
           (item.kind === 'table'
-            ? 'Таблица'
+            ? tr('Таблица')
             : item.kind === 'video'
-              ? 'Видео'
+              ? tr('Видео')
               : item.kind === 'audio'
-                ? 'Аудио'
+                ? tr('Аудио')
                 : item.kind === 'disclosure'
-                  ? 'Сноски'
-                  : 'Ссылка')}
+                  ? tr('Сноски')
+                  : tr('Ссылка'))}
         <span>{item.locked ? '🔒' : '⠿'}</span>
       </div>
       {item.kind === 'disclosure' && item.sections && (
@@ -207,7 +208,7 @@ export default function DomObject({
                       >
                         <Cell
                           text={cell.text}
-                          label={`Ячейка ${r + 1}:${c + 1}`}
+                          label={tr('Ячейка {0}:{1}', r + 1, c + 1)}
                           readOnly={!!item.locked || readOnly}
                           style={{
                             height:
@@ -254,7 +255,10 @@ export default function DomObject({
       {(item.kind === 'video' || item.kind === 'audio') && (
         <div className="media-body">
           {error ? (
-            <p role="alert">Файл недоступен: {error}</p>
+            <p role="alert">
+              {tr('Файл недоступен:') + ' '}
+              {translateMessage(error)}
+            </p>
           ) : url ? (
             item.kind === 'video' ? (
               <video
@@ -262,7 +266,7 @@ export default function DomObject({
                 preload="metadata"
                 src={url}
                 onError={() =>
-                  setError('Формат или кодек не поддерживается этой ОС. Оригинал сохранён.')
+                  setError(tr('Формат или кодек не поддерживается этой ОС. Оригинал сохранён.'))
                 }
               />
             ) : (
@@ -271,12 +275,12 @@ export default function DomObject({
                 preload="metadata"
                 src={url}
                 onError={() =>
-                  setError('Формат или кодек не поддерживается этой ОС. Оригинал сохранён.')
+                  setError(tr('Формат или кодек не поддерживается этой ОС. Оригинал сохранён.'))
                 }
               />
             )
           ) : (
-            <p>Загрузка файла…</p>
+            <p>{tr('Загрузка файла…')}</p>
           )}
         </div>
       )}
@@ -290,9 +294,9 @@ export default function DomObject({
               else window.open(item.url, '_blank', 'noopener,noreferrer');
             }}
           >
-            Открыть ссылку ↗
+            {tr('Открыть ссылку ↗')}
           </button>
-          {error && <small>{error}</small>}
+          {error && <small>{translateMessage(error)}</small>}
         </div>
       )}
     </div>

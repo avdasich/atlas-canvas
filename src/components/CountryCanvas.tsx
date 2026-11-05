@@ -1,6 +1,7 @@
 import { isTauri } from '@tauri-apps/api/core';
 import { useState } from 'react';
 import type { Country } from '../domain/countries';
+import { countryName, t as tr, translateMessage } from '../i18n/index';
 import { useScene } from '../services/useScene';
 import ArchivePanel from './editor/ArchivePanel';
 import CanvasEditor from './editor/CanvasEditor';
@@ -13,15 +14,17 @@ export default function CountryCanvas({ country, onBack }: Props) {
   if (!storage.loaded)
     return (
       <main className="load-screen">
-        <h1>{country.name}</h1>
-        <p role={storage.error ? 'alert' : 'status'}>{storage.error || 'Загрузка холста…'}</p>
+        <h1>{countryName(country)}</h1>
+        <p role={storage.error ? 'alert' : 'status'}>{storage.error || tr('Загрузка холста…')}</p>
         <div>
-          <button onClick={onBack}>← Карта</button>
+          <button onClick={onBack}>{tr('← Карта')}</button>
           {storage.error && (
             <>
-              <button onClick={storage.reload}>Повторить загрузку</button>
-              <button onClick={() => setRecoveryOpen(true)}>Восстановить предыдущую версию</button>
-              <button onClick={() => setRecoveryArchive(true)}>Восстановить архив</button>
+              <button onClick={storage.reload}>{tr('Повторить загрузку')}</button>
+              <button onClick={() => setRecoveryOpen(true)}>
+                {tr('Восстановить предыдущую версию')}
+              </button>
+              <button onClick={() => setRecoveryArchive(true)}>{tr('Восстановить архив')}</button>
             </>
           )}
         </div>
@@ -50,21 +53,24 @@ export default function CountryCanvas({ country, onBack }: Props) {
   if (storage.loaded.legacyKey)
     return (
       <main className="load-screen">
-        <h1>Сохраним прежний холст</h1>
+        <h1>{tr('Сохраним прежний холст')}</h1>
         <p>
-          В стране «{country.name}» найдено объектов: {storage.loaded.scene.items.length}.
+          {tr('В стране «')}
+          {countryName(country)}
+          {tr('» найдено объектов:') + ' '}
+          {storage.loaded.scene.items.length}.
         </p>
         <p>
           {isTauri()
-            ? 'Перенести их в SQLite?'
-            : 'Перенести их в новый формат браузерного предпросмотра?'}{' '}
-          Расположение сохранится, исходная запись localStorage останется нетронутой.
+            ? tr('Перенести их в SQLite?')
+            : tr('Перенести их в новый формат браузерного предпросмотра?')}{' '}
+          {tr('Расположение сохранится, исходная запись localStorage останется нетронутой.')}
         </p>
-        {storage.error && <p role="alert">{storage.error}</p>}
+        {storage.error && <p role="alert">{translateMessage(storage.error)}</p>}
         <div>
-          <button onClick={onBack}>← Карта</button>
+          <button onClick={onBack}>{tr('← Карта')}</button>
           <button disabled={storage.status === 'Перенос…'} onClick={() => void storage.migrate()}>
-            Перенести холст
+            {tr('Перенести холст')}
           </button>
         </div>
       </main>

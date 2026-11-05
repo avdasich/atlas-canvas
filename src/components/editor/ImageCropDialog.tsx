@@ -10,6 +10,7 @@ import {
   type ImageCrop,
 } from '../../domain/crop';
 import type { CanvasItem } from '../../domain/scene';
+import { t as tr, translateMessage } from '../../i18n/index';
 import { repository } from '../../services/SceneRepository';
 
 type Drag = { start: { x: number; y: number }; crop: ImageCrop; corner?: CropCorner };
@@ -74,7 +75,7 @@ export default function ImageCropDialog({
         className="app-dialog crop-dialog"
         role="dialog"
         aria-modal="true"
-        aria-label="Обрезка изображения"
+        aria-label={tr('Обрезка изображения')}
         onKeyDown={(e) => {
           if (e.key === 'Escape') {
             e.preventDefault();
@@ -82,9 +83,9 @@ export default function ImageCropDialog({
           }
         }}
       >
-        <h2>Обрезка изображения</h2>
-        <p>Перемещайте рамку и тяните её углы. Исходный файл остаётся целым.</p>
-        {error && <p role="alert">{error}</p>}
+        <h2>{tr('Обрезка изображения')}</h2>
+        <p>{tr('Перемещайте рамку и тяните её углы. Исходный файл остаётся целым.')}</p>
+        {error && <p role="alert">{translateMessage(error)}</p>}
         {url && (
           <div
             ref={frame}
@@ -108,7 +109,7 @@ export default function ImageCropDialog({
           >
             <img
               src={url}
-              alt="Исходное изображение для обрезки"
+              alt={tr('Исходное изображение для обрезки')}
               draggable={false}
               onLoad={(e) =>
                 setNatural({
@@ -134,7 +135,7 @@ export default function ImageCropDialog({
                   type="button"
                   key={corner}
                   className={`crop-corner ${corner}`}
-                  aria-label={`Угол обрезки ${corner}`}
+                  aria-label={tr('Угол обрезки {0}', corner)}
                   onPointerDown={(e) => start(e, corner)}
                 />
               ))}
@@ -142,7 +143,7 @@ export default function ImageCropDialog({
           </div>
         )}
         <label className="property-field">
-          Пропорции
+          {tr('Пропорции')}
           <select
             value={ratio}
             onChange={(e) => {
@@ -151,8 +152,8 @@ export default function ImageCropDialog({
               if (next) setCrop((c) => cropToAspect(c, next / (natural.width / natural.height)));
             }}
           >
-            <option value={0}>Свободно</option>
-            <option value={1}>Квадрат · 1:1</option>
+            <option value={0}>{tr('Свободно')}</option>
+            <option value={1}>{tr('Квадрат · 1:1')}</option>
             <option value={4 / 3}>4:3</option>
             <option value={16 / 9}>16:9</option>
             <option value={3 / 4}>3:4</option>
@@ -161,9 +162,16 @@ export default function ImageCropDialog({
         <div className="crop-values">
           {(['x', 'y', 'width', 'height'] as const).map((key) => (
             <label key={key}>
-              {{ x: 'Слева, %', y: 'Сверху, %', width: 'Ширина, %', height: 'Высота, %' }[key]}
+              {
+                {
+                  x: tr('Слева, %'),
+                  y: tr('Сверху, %'),
+                  width: tr('Ширина, %'),
+                  height: tr('Высота, %'),
+                }[key]
+              }
               <input
-                aria-label={`Обрезка: ${key}`}
+                aria-label={tr('Обрезка: {0}', key)}
                 type="number"
                 step={0.1}
                 min={key === 'x' || key === 'y' ? 0 : 0.1}
@@ -192,17 +200,17 @@ export default function ImageCropDialog({
               setCrop(fullImage);
             }}
           >
-            Сбросить рамку
+            {tr('Сбросить рамку')}
           </button>
           <button type="button" onClick={onClose}>
-            Отмена
+            {tr('Отмена')}
           </button>
           <button
             type="button"
             disabled={!url || !!error || !validCrop(crop)}
             onClick={() => onApply(crop)}
           >
-            Применить обрезку
+            {tr('Применить обрезку')}
           </button>
         </div>
       </section>

@@ -30,6 +30,7 @@ import {
 import { selectItem } from '../../domain/selection';
 import { snapPosition } from '../../domain/snapping';
 import { createTable } from '../../domain/table';
+import { countryName, objectCount, t as tr, translateMessage } from '../../i18n/index';
 import { canvasClipboard } from '../../services/clipboard';
 import { flushBeforeExit } from '../../services/exitGuard';
 import { exportCanvas } from '../../services/exportCanvas';
@@ -307,11 +308,11 @@ export default function CanvasEditor({
     const item: CanvasItem = { id: crypto.randomUUID(), kind, x: 0, y: 0 };
     if (kind === 'table') item.table = table ?? createTable();
     if (kind === 'disclosure') {
-      item.title = 'Сноски';
-      item.sections = [createSection('Подробнее'), createSection('Источники')];
+      item.title = tr('Сноски');
+      item.sections = [createSection(tr('Подробнее')), createSection(tr('Источники'))];
     }
     if (kind === 'note') {
-      item.content = 'Новая заметка';
+      item.content = tr('Новая заметка');
       item.fontSize = 28;
       item.fill = theme.textColor ?? '#243447';
     }
@@ -371,7 +372,7 @@ export default function CanvasEditor({
   }
   function arrange() {
     if (items.some((i) => i.locked)) {
-      setMessage('Снимите блокировку объектов перед общей раскладкой.');
+      setMessage(tr('Снимите блокировку объектов перед общей раскладкой.'));
       return;
     }
     const next = arrangeItems(items, usableViewport(), measureText);
@@ -558,7 +559,7 @@ export default function CanvasEditor({
           break;
         case 'save':
           void flushBeforeExit()
-            .then(() => setMessage('Сохранено'))
+            .then(() => setMessage(tr('Сохранено')))
             .catch((e) => setMessage(String(e)));
           break;
         case 'archive':
@@ -738,7 +739,7 @@ export default function CanvasEditor({
       return;
     }
     if (!validUrl(linkUrl)) {
-      setMessage('Введите полный http/https адрес');
+      setMessage(tr('Введите полный http/https адрес'));
       return;
     }
     const item = placeItem(
@@ -760,21 +761,21 @@ export default function CanvasEditor({
     setLinkOpen(false);
   }
   const fileMenu: ToolbarMenuItem[] = [
-    { label: 'О программе и лицензии', onClick: () => setAboutOpen(true) },
+    { label: tr('О программе и лицензии'), onClick: () => setAboutOpen(true) },
     {
-      label: 'Показать выделенное',
+      label: tr('Показать выделенное'),
       onClick: () => setCamera(fitInEditor(selectedItems.map(bounds))),
       disabled: !selectedItems.length,
     },
-    { label: 'Предыдущий вид', onClick: () => setCamera(lastCamera.current) },
-    { label: 'Архив и восстановление', onClick: () => setArchiveOpen(true) },
-    { label: 'Версии холста', onClick: () => setRevisionsOpen(true) },
-    { label: 'PNG всего холста', onClick: () => void exportImage('png', 'all') },
-    { label: 'PNG видимой области', onClick: () => void exportImage('png', 'viewport') },
-    { label: 'PDF всего холста', onClick: () => void exportImage('pdf', 'all') },
-    { label: 'PDF по страницам', onClick: () => void exportImage('pdf-pages', 'all') },
+    { label: tr('Предыдущий вид'), onClick: () => setCamera(lastCamera.current) },
+    { label: tr('Архив и восстановление'), onClick: () => setArchiveOpen(true) },
+    { label: tr('Версии холста'), onClick: () => setRevisionsOpen(true) },
+    { label: tr('PNG всего холста'), onClick: () => void exportImage('png', 'all') },
+    { label: tr('PNG видимой области'), onClick: () => void exportImage('png', 'viewport') },
+    { label: tr('PDF всего холста'), onClick: () => void exportImage('pdf', 'all') },
+    { label: tr('PDF по страницам'), onClick: () => void exportImage('pdf-pages', 'all') },
     {
-      label: 'PNG выбранной таблицы',
+      label: tr('PNG выбранной таблицы'),
       onClick: async () => {
         try {
           const result = await exportCanvas(
@@ -783,7 +784,7 @@ export default function CanvasEditor({
             'all',
             'png',
           );
-          setMessage(result ? `Таблица сохранена: ${result}` : 'Экспорт отменён');
+          setMessage(result ? tr('Таблица сохранена: {0}', result) : tr('Экспорт отменён'));
         } catch (e) {
           setMessage(String(e));
         }
@@ -791,17 +792,17 @@ export default function CanvasEditor({
       disabled: selectedItems.length !== 1 || selectedItems[0].kind !== 'table',
     },
     {
-      label: 'Выделить всё',
+      label: tr('Выделить всё'),
       onClick: () => {
         setSelected(items.filter((i) => !i.hidden).map((i) => i.id));
       },
     },
     {
-      label: 'Копировать объекты',
+      label: tr('Копировать объекты'),
       onClick: () => canvasClipboard.write(selectedItems),
       disabled: !selectedItems.length,
     },
-    { label: 'Вставить объекты', onClick: () => duplicate(canvasClipboard.read()) },
+    { label: tr('Вставить объекты'), onClick: () => duplicate(canvasClipboard.read()) },
   ];
   return (
     <main
@@ -810,11 +811,11 @@ export default function CanvasEditor({
     >
       {viewOnly && (
         <button className="leave-view" onClick={() => setViewOnly(false)}>
-          Вернуться к редактированию · Esc
+          {tr('Вернуться к редактированию · Esc')}
         </button>
       )}
       <EditorToolbar
-        countryName={country.name}
+        countryName={countryName(country)}
         busy={busy}
         canUndo={!!history.past.length && !editing}
         canRedo={!!history.future.length && !editing}
@@ -840,45 +841,47 @@ export default function CanvasEditor({
           <button
             onClick={() => (storage.error ? void storage.flush().catch(() => {}) : setMessage(''))}
           >
-            {storage.error ? 'Повторить сохранение' : 'Закрыть'}
+            {storage.error ? tr('Повторить сохранение') : tr('Закрыть')}
           </button>
         </div>
       )}
       {busy && !linkOpen && (downloadId.current || photoImporting) && (
         <div className="operation-bar" role="status">
-          <span>{photoImporting ? 'Копирование фотографий…' : `Импорт: ${downloadProgress}`}</span>
+          <span>
+            {photoImporting ? tr('Копирование фотографий…') : tr('Импорт: {0}', downloadProgress)}
+          </span>
           <button
             onClick={() => {
               if (photoImporting) photoCancel.current = true;
               else if (downloadId.current)
                 void invoke('cancel_operation', { id: downloadId.current });
-              setDownloadProgress('Отмена…');
+              setDownloadProgress(tr('Отмена…'));
             }}
           >
-            {photoImporting ? 'Остановить после текущего фото' : 'Остановить операцию'}
+            {photoImporting ? tr('Остановить после текущего фото') : tr('Остановить операцию')}
           </button>
         </div>
       )}
       {fontLibrary.error && (
         <div role="status" className="editor-notice">
-          {fontLibrary.error}
+          {translateMessage(fontLibrary.error)}
         </div>
       )}
       {tool === 'pen' && (
         <div className="brush-bar">
           <label>
-            Цвет{' '}
+            {tr('Цвет')}{' '}
             <input
-              aria-label="Цвет карандаша"
+              aria-label={tr('Цвет карандаша')}
               type="color"
               value={brush.color}
               onChange={(e) => setBrush({ ...brush, color: e.target.value })}
             />
           </label>
           <label>
-            Толщина{' '}
+            {tr('Толщина')}{' '}
             <input
-              aria-label="Толщина карандаша"
+              aria-label={tr('Толщина карандаша')}
               type="number"
               min={1}
               max={100}
@@ -889,7 +892,7 @@ export default function CanvasEditor({
             />
           </label>
           <label>
-            Непрозрачность{' '}
+            {tr('Непрозрачность')}{' '}
             <input
               type="range"
               min={0.05}
@@ -926,7 +929,7 @@ export default function CanvasEditor({
         <section
           ref={containerRef}
           className="canvas-viewport"
-          aria-label="Холст страны"
+          aria-label={tr('Холст страны')}
           {...hitRouting}
           onDragOver={(e) => {
             if (!busy && !viewOnly) e.preventDefault();
@@ -1096,10 +1099,11 @@ export default function CanvasEditor({
           )}
           {!items.length && (
             <div className="empty-canvas">
-              <span>Ваше пространство для открытий</span>
+              <span>{tr('Ваше пространство для открытий')}</span>
               <p>
-                Добавьте текст, фигуру или фотографию.
-                <br />У каждой страны — свой холст.
+                {tr('Добавьте текст, фигуру или фотографию.')}
+                <br />
+                {tr('У каждой страны — свой холст.')}
               </p>
             </div>
           )}
@@ -1109,23 +1113,24 @@ export default function CanvasEditor({
               role="menu"
               style={{ left: Math.max(0, menu.x), top: Math.max(0, menu.y) }}
             >
-              <button onClick={() => add('note')}>Добавить текст</button>
+              <button onClick={() => add('note')}>{tr('Добавить текст')}</button>
               <button
                 onClick={() => {
                   showAll();
                   setMenu(null);
                 }}
               >
-                Показать всё <kbd>F</kbd>
+                {tr('Показать всё') + ' '}
+                <kbd>F</kbd>
               </button>
               <button disabled={items.length < 2} onClick={arrange}>
-                Разложить без пересечений
+                {tr('Разложить без пересечений')}
               </button>
               <button disabled={!selectedItems.length} onClick={() => duplicate()}>
-                Дублировать
+                {tr('Дублировать')}
               </button>
               <button disabled={!selectedItems.length} onClick={remove}>
-                Удалить
+                {tr('Удалить')}
               </button>
               <button
                 onClick={() => {
@@ -1133,9 +1138,9 @@ export default function CanvasEditor({
                   setMenu(null);
                 }}
               >
-                Сбросить вид
+                {tr('Сбросить вид')}
               </button>
-              <button onClick={() => setMenu(null)}>Закрыть меню</button>
+              <button onClick={() => setMenu(null)}>{tr('Закрыть меню')}</button>
             </div>
           )}
         </section>
@@ -1230,12 +1235,12 @@ export default function CanvasEditor({
           setLinkUrl={setLinkUrl}
           setLinkTitle={setLinkTitle}
           busy={busy}
-          message={message}
+          message={translateMessage(message)}
           downloadProgress={downloadProgress}
           cancellable={!!downloadId.current}
           onCancel={() => {
             void invoke('cancel_operation', { id: downloadId.current });
-            setDownloadProgress('Отмена…');
+            setDownloadProgress(tr('Отмена…'));
           }}
           onClose={() => setLinkOpen(false)}
           onSubmit={submitLink}
@@ -1243,15 +1248,15 @@ export default function CanvasEditor({
       )}
       <footer className="editor-status">
         <span className={storage.error ? 'save-error' : ''} role="status">
-          {storage.status}
-          {!isTauri() && ' · Предпросмотр в браузере'}
+          {translateMessage(storage.status)}
+          {!isTauri() && tr('· Предпросмотр в браузере')}
         </span>
         <span>
-          {items.length} объектов · {selectedItems.length} выбрано
+          {objectCount(items.length)} ·{selectedItems.length} {' ' + tr('выбрано')}
         </span>
-        <span className="pan-hint">Пробел + мышь — перемещение · Shift + клик — выбор</span>
+        <span className="pan-hint">{tr('Пробел + мышь — перемещение · Shift + клик — выбор')}</span>
         <button
-          title="Масштаб 100% (1)"
+          title={tr('Масштаб 100% (1)')}
           onClick={() =>
             setCamera((c) => zoomAt(c, { x: size.width / 2, y: size.height / 2 }, 1 / c.scale))
           }

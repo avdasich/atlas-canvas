@@ -4,11 +4,16 @@ import { Suspense, lazy, useEffect, useState } from 'react';
 import './App.css';
 import AboutPanel from './components/editor/AboutPanel';
 import ArchivePanel from './components/editor/ArchivePanel';
+import LanguageSelect from './components/LanguageSelect';
 import WorldMap from './components/WorldMap';
 import type { Country } from './domain/countries';
+import { t as tr, translateMessage } from './i18n';
+import { useInitializeLanguage, useLanguage } from './i18n/useLanguage';
 import { flushBeforeExit } from './services/exitGuard';
 const CountryCanvas = lazy(() => import('./components/CountryCanvas'));
 function App() {
+  useLanguage();
+  const languageError = useInitializeLanguage();
   const [lightUi, setLightUi] = useState(
     () => localStorage.getItem('atlas-canvas:ui-theme') === 'light',
   );
@@ -25,7 +30,7 @@ function App() {
         await flushBeforeExit();
         await invoke('finish_exit');
       } catch (e) {
-        setBackupError(`Не удалось завершить сохранение: ${String(e)}`);
+        setBackupError(tr('Не удалось завершить сохранение: {0}', String(e)));
       }
     }).then((fn) => {
       if (disposed) fn();
@@ -45,7 +50,7 @@ function App() {
     let cancelled = false;
     let off: (() => void) | undefined;
     void listen<string>('atlas-backup-error', (e) =>
-      setBackupError(`Автокопия не создана: ${e.payload}`),
+      setBackupError(tr('Автокопия не создана: {0}', e.payload)),
     ).then((fn) => {
       if (cancelled) fn();
       else off = fn;
@@ -59,13 +64,13 @@ function App() {
   if (country)
     return (
       <>
-        <Suspense fallback={<main className="load-screen">Загрузка редактора…</main>}>
+        <Suspense fallback={<main className="load-screen">{tr('Загрузка редактора…')}</main>}>
           <CountryCanvas key={country.id} country={country} onBack={() => setCountry(null)} />
         </Suspense>
         {backupError && (
           <div className="global-notice" role="alert">
-            {backupError}
-            <button onClick={() => setBackupError('')}>Закрыть</button>
+            {translateMessage(backupError)}
+            <button onClick={() => setBackupError('')}>{tr('Закрыть')}</button>
           </div>
         )}
       </>
@@ -74,22 +79,24 @@ function App() {
     <main className="map-page">
       <header className="map-header">
         <div>
-          <span className="eyebrow">ВАШ ЛИЧНЫЙ АТЛАС</span>
+          <span className="eyebrow">{tr('ВАШ ЛИЧНЫЙ АТЛАС')}</span>
           <h1>Atlas Canvas</h1>
-          <p>Выберите страну. Соберите её историю на своём холсте.</p>
+          <p>{tr('Выберите страну. Соберите её историю на своём холсте.')}</p>
         </div>
         <div className="map-header-actions">
-          <span className="offline-label">● Локально и без аккаунта</span>
-          <button onClick={() => setAboutOpen(true)}>О программе</button>
+          <LanguageSelect />
+          <span className="offline-label">{tr('● Локально и без аккаунта')}</span>
+          <button onClick={() => setAboutOpen(true)}>{tr('О программе')}</button>
           <button onClick={() => setLightUi((v) => !v)}>
-            {lightUi ? 'Тёмная тема' : 'Светлая тема'}
+            {lightUi ? tr('Тёмная тема') : tr('Светлая тема')}
           </button>
         </div>
       </header>
       <button className="atlas-archive-button" onClick={() => setArchiveOpen(true)}>
-        Архив и восстановление
+        {tr('Архив и восстановление')}
       </button>
-      {backupError && <p role="alert">{backupError}</p>}
+      {backupError && <p role="alert">{translateMessage(backupError)}</p>}
+      {languageError && <p role="alert">{translateMessage(languageError)}</p>}
       <WorldMap key={mapRevision} onCountrySelect={setCountry} />
       {aboutOpen && <AboutPanel onClose={() => setAboutOpen(false)} />}
       {archiveOpen && (

@@ -1,5 +1,6 @@
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { useEffect, useState } from 'react';
+import { t as tr } from '../i18n/index';
 import { writePreference } from './preferenceWrites';
 export function usePreferences<T>(
   key: string,
@@ -18,7 +19,7 @@ export function usePreferences<T>(
           : localStorage.getItem(`atlas-canvas:prefs:${key}`);
         if (raw) {
           const parsed: unknown = JSON.parse(raw);
-          if (!validate(parsed)) throw new Error('Неподдерживаемые настройки');
+          if (!validate(parsed)) throw new Error(tr('Неподдерживаемые настройки'));
           if (active) setValue(parsed);
         }
       } catch (e) {
@@ -34,7 +35,7 @@ export function usePreferences<T>(
   function update(next: T) {
     if (!ready) return;
     if (!validate(next)) {
-      setError('Некорректные настройки');
+      setError(tr('Некорректные настройки'));
       return;
     }
     const raw = JSON.stringify(next);
@@ -44,7 +45,7 @@ export function usePreferences<T>(
       else localStorage.setItem(`atlas-canvas:prefs:${key}`, raw);
     })
       .then(() => setError(''))
-      .catch((e) => setError(`Не удалось сохранить настройки: ${String(e)}`));
+      .catch((e) => setError(tr('Не удалось сохранить настройки: {0}', String(e))));
   }
   return { value, update, ready, error };
 }

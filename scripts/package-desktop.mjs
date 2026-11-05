@@ -24,18 +24,15 @@ async function copyBundle(directory, extension, suffix = extension) {
   await copyFile(path.join(bundle, directory, files[0]), path.join(output, `${name}${suffix}`));
 }
 if (platform.startsWith('macOS')) {
+  const app = path.join(bundle, 'macos', 'Atlas Canvas.app');
+  execFileSync('codesign', ['--verify', '--deep', '--strict', '--verbose=2', app], {
+    stdio: 'inherit',
+  });
+  const arch = target.startsWith('aarch64') ? 'arm64' : 'x86_64';
+  execFileSync('lipo', [path.join(app, 'Contents', 'MacOS', 'tauri-app'), '-verify_arch', arch], {
+    stdio: 'inherit',
+  });
   await copyBundle('dmg', '.dmg');
-  execFileSync(
-    'ditto',
-    [
-      '-c',
-      '-k',
-      '--keepParent',
-      path.join(bundle, 'macos', 'Atlas Canvas.app'),
-      path.join(output, `${name}.zip`),
-    ],
-    { stdio: 'inherit' },
-  );
 } else if (platform === 'Windows-x64') await copyBundle('nsis', '.exe', '-setup.exe');
 else {
   await copyBundle('deb', '.deb');

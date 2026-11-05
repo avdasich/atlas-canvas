@@ -1,5 +1,6 @@
 import { convertFileSrc, invoke, isTauri } from '@tauri-apps/api/core';
 import { useEffect, useState } from 'react';
+import { t as tr } from '../i18n/index';
 export const systemFonts = [
   'Noto Sans',
   'Noto Serif',
@@ -28,7 +29,7 @@ export function useFonts() {
         if (active) setLoadedAt((n) => n + 1);
       })
       .catch(() => {
-        if (active) setError('Встроенный шрифт недоступен, используется системная замена.');
+        if (active) setError(tr('Встроенный шрифт недоступен, используется системная замена.'));
       });
     return () => {
       active = false;
@@ -54,7 +55,7 @@ export function useFonts() {
               result.push({ value: family, label: asset.title });
             } catch {
               if (active)
-                setError(`Шрифт «${asset.title}» недоступен. Используется системная замена.`);
+                setError(tr('Шрифт «{0}» недоступен. Используется системная замена.', asset.title));
             }
           }
           if (active) setFonts([...systemFonts, ...result]);
@@ -68,7 +69,7 @@ export function useFonts() {
   }, [revision]);
   async function importFont() {
     if (!isTauri()) {
-      setError('Добавление шрифтов доступно в настольном приложении.');
+      setError(tr('Добавление шрифтов доступно в настольном приложении.'));
       return;
     }
     try {

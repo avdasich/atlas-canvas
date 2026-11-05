@@ -28,12 +28,18 @@ fn templates_keep_their_media_and_remap_only_font_properties() {
         [prefs.to_string()],
     )
     .unwrap();
+    conn.execute(
+        "INSERT INTO preferences(key,json) VALUES ('ui-language','\"en\"')",
+        [],
+    )
+    .unwrap();
     drop(conn);
     let archive = source.join("all.atlas");
     write_archive(&source, &archive, None).unwrap();
     let target = dir();
     let stage = target.join("stage");
     let manifest = stage_archive(&archive, &stage).unwrap();
+    assert!(!manifest.preferences.contains_key("ui-language"));
     apply_staged(
         &target,
         &Staged {

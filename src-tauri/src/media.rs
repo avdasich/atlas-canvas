@@ -63,8 +63,14 @@ pub async fn import_media(
         let picked = app
             .dialog()
             .file()
-            .set_title("Импорт в Atlas Canvas")
-            .add_filter("Поддерживаемые файлы", extensions)
+            .set_title(crate::language::text(
+                "Импорт в Atlas Canvas",
+                "Import into Atlas Canvas",
+            ))
+            .add_filter(
+                crate::language::text("Поддерживаемые файлы", "Supported files"),
+                extensions,
+            )
             .blocking_pick_file();
         let Some(picked) = picked else {
             return Ok(None);
@@ -94,7 +100,7 @@ pub async fn import_media(
         let title = path
             .file_name()
             .and_then(|value| value.to_str())
-            .unwrap_or("Медиа")
+            .unwrap_or(crate::language::text("Медиа", "Media"))
             .to_owned();
         let mime = match extension.as_str() {
             "mp4" => "video/mp4",
@@ -239,9 +245,9 @@ pub async fn save_canvas_export(
         let picked = app
             .dialog()
             .file()
-            .set_title("Экспорт холста")
+            .set_title(crate::language::text("Экспорт холста", "Export canvas"))
             .set_file_name(format!("Canvas-{}.{}", new_id(), format))
-            .add_filter("Экспорт", &[&format])
+            .add_filter(crate::language::text("Экспорт", "Export"), &[&format])
             .blocking_save_file();
         let Some(picked) = picked else {
             return Ok(None);
@@ -325,7 +331,10 @@ pub async fn import_url(
     let id = new_id();
     let relative = format!("assets/{id}.{ext}");
     let path = dir.join(&relative);
-    let title = format!("Загруженное медиа.{ext}");
+    let title = format!(
+        "{}.{ext}",
+        crate::language::text("Загруженное медиа", "Downloaded media")
+    );
     let mut file = fs::OpenOptions::new()
         .write(true)
         .create_new(true)

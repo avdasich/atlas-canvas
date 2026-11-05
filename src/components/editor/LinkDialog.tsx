@@ -1,3 +1,4 @@
+import { t as tr, translateMessage } from '../../i18n/index';
 import type { LinkKind } from '../../services/useCanvasTransfers';
 type Props = {
   linkKind: LinkKind;
@@ -38,26 +39,26 @@ export default function LinkDialog({
           onSubmit();
         }}
       >
-        <h2>Ссылка или медиа по URL</h2>
+        <h2>{tr('Ссылка или медиа по URL')}</h2>
         <label>
-          Тип
+          {tr('Тип')}
           <select
-            aria-label="Тип содержимого по URL"
+            aria-label={tr('Тип содержимого по URL')}
             value={linkKind}
             onChange={(e) => setLinkKind(e.target.value as typeof linkKind)}
           >
-            <option value="link">Ссылка на страницу</option>
-            <option value="image">Скачать изображение</option>
-            <option value="video">Скачать видео</option>
-            <option value="audio">Скачать аудио</option>
+            <option value="link">{tr('Ссылка на страницу')}</option>
+            <option value="image">{tr('Скачать изображение')}</option>
+            <option value="video">{tr('Скачать видео')}</option>
+            <option value="audio">{tr('Скачать аудио')}</option>
           </select>
         </label>
         <label>
-          Название
+          {tr('Название')}
           <input value={linkTitle} onChange={(e) => setLinkTitle(e.target.value)} />
         </label>
         <label>
-          Адрес
+          {tr('Адрес')}
           <input
             autoFocus
             type="url"
@@ -68,11 +69,17 @@ export default function LinkDialog({
           />
         </label>
         <p>
-          Страница сохраняется как ссылка. Для офлайн-работы нужен прямой адрес доступного для
-          скачивания файла. Защищённые видеосервисы не скачиваются.
+          {tr(
+            'Страница сохраняется как ссылка. Для офлайн-работы нужен прямой адрес доступного для скачивания файла. Защищённые видеосервисы не скачиваются.',
+          )}
         </p>
-        {message && <p role="alert">{message}</p>}
-        {busy && downloadProgress && <p role="status">Загрузка: {downloadProgress}</p>}
+        {message && <p role="alert">{translateMessage(message)}</p>}
+        {busy && downloadProgress && (
+          <p role="status">
+            {tr('Загрузка:') + ' '}
+            {downloadProgress}
+          </p>
+        )}
         <div className="dialog-actions">
           {busy && cancellable && (
             <button
@@ -81,14 +88,14 @@ export default function LinkDialog({
                 onCancel();
               }}
             >
-              Остановить загрузку
+              {tr('Остановить загрузку')}
             </button>
           )}
           <button type="button" disabled={busy} onClick={() => onClose()}>
-            Отмена
+            {tr('Отмена')}
           </button>
           <button type="submit" disabled={busy}>
-            {busy ? 'Загрузка…' : 'Добавить'}
+            {busy ? tr('Загрузка…') : tr('Добавить')}
           </button>
         </div>
       </form>

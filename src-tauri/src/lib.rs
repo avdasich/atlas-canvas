@@ -1,5 +1,6 @@
 mod archive;
 mod images;
+mod language;
 mod media;
 mod object_features;
 mod operations;
@@ -85,7 +86,8 @@ pub fn run() {
             archive::inspect_archive,
             archive::cancel_archive,
             archive::apply_archive,
-            finish_exit
+            finish_exit,
+            language::set_ui_language
         ])
         .build(tauri::generate_context!())
         .expect("error while building Atlas Canvas")

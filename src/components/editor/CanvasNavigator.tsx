@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Bounds } from '../../domain/geometry';
 import { union } from '../../domain/geometry';
 import type { Camera, Theme } from '../../domain/scene';
+import { t as tr } from '../../i18n/index';
 type Props = {
   theme: Theme;
   camera: Camera;
@@ -104,7 +105,7 @@ export default function CanvasNavigator({
       )}
       <div className="canvas-navigation">
         <button aria-expanded={open} onClick={() => setOpen((v) => !v)}>
-          Навигация и направляющие
+          {tr('Навигация и направляющие')}
         </button>
         {open && (
           <div className="navigation-settings">
@@ -114,7 +115,7 @@ export default function CanvasNavigator({
                 checked={theme.minimap ?? false}
                 onChange={(e) => onTheme({ ...theme, minimap: e.target.checked })}
               />
-              Мини-карта
+              {tr('Мини-карта')}
             </label>
             <label className="check-field">
               <input
@@ -122,7 +123,7 @@ export default function CanvasNavigator({
                 checked={theme.rulers ?? false}
                 onChange={(e) => onTheme({ ...theme, rulers: e.target.checked })}
               />
-              Линейки
+              {tr('Линейки')}
             </label>
             <label className="check-field">
               <input
@@ -130,14 +131,14 @@ export default function CanvasNavigator({
                 checked={theme.snapGuides ?? true}
                 onChange={(e) => onTheme({ ...theme, snapGuides: e.target.checked })}
               />
-              Привязка к направляющим
+              {tr('Привязка к направляющим')}
             </label>
             <div className="dialog-actions">
               <button disabled={(theme.guides?.length ?? 0) >= 100} onClick={() => addGuide('x')}>
-                Вертикальная
+                {tr('Вертикальная')}
               </button>
               <button disabled={(theme.guides?.length ?? 0) >= 100} onClick={() => addGuide('y')}>
-                Горизонтальная
+                {tr('Горизонтальная')}
               </button>
             </div>
             {theme.guides?.map((g) => (
@@ -145,7 +146,7 @@ export default function CanvasNavigator({
                 <label>
                   {g.axis.toUpperCase()}
                   <input
-                    aria-label={`Направляющая ${g.axis} ${g.id}`}
+                    aria-label={tr('Направляющая {0} {1}', g.axis, g.id)}
                     type="number"
                     value={Math.round(g.value)}
                     onChange={(e) => {
@@ -160,7 +161,7 @@ export default function CanvasNavigator({
                   />
                 </label>
                 <button
-                  aria-label="Удалить направляющую"
+                  aria-label={tr('Удалить направляющую')}
                   onClick={() =>
                     onTheme({ ...theme, guides: theme.guides!.filter((v) => v.id !== g.id) })
                   }
@@ -169,9 +170,9 @@ export default function CanvasNavigator({
                 </button>
               </div>
             ))}
-            <h3>Закладки вида</h3>
+            <h3>{tr('Закладки вида')}</h3>
             <input
-              aria-label="Название закладки"
+              aria-label={tr('Название закладки')}
               maxLength={80}
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -189,13 +190,13 @@ export default function CanvasNavigator({
                 setName('');
               }}
             >
-              Запомнить вид
+              {tr('Запомнить вид')}
             </button>
             {theme.bookmarks?.map((mark) => (
               <div className="layer-row" key={mark.id}>
                 <button onClick={() => onCamera({ ...mark.camera })}>{mark.name}</button>
                 <button
-                  aria-label={`Удалить закладку ${mark.name}`}
+                  aria-label={tr('Удалить закладку {0}', mark.name)}
                   onClick={() =>
                     onTheme({
                       ...theme,
@@ -212,7 +213,7 @@ export default function CanvasNavigator({
         {theme.minimap && (
           <svg
             className="canvas-minimap"
-            aria-label="Мини-карта холста"
+            aria-label={tr('Мини-карта холста')}
             viewBox={`${b.left} ${b.top} ${width} ${height}`}
             onClick={(e) => {
               const matrix = e.currentTarget.getScreenCTM();

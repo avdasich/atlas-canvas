@@ -1,5 +1,6 @@
 import { createSection } from '../../../domain/disclosure';
 import type { CanvasItem } from '../../../domain/scene';
+import { t as tr } from '../../../i18n/index';
 import Numeric from '../controls/NumericField';
 export default function DisclosureProperties({
   item,
@@ -11,22 +12,25 @@ export default function DisclosureProperties({
   const sections = item.sections ?? [];
   return (
     <details open>
-      <summary>Раскрывающиеся сноски</summary>
+      <summary>{tr('Раскрывающиеся сноски')}</summary>
       <label className="property-field">
-        Название блока
+        {tr('Название блока')}
         <input
           maxLength={200}
-          value={item.title ?? 'Сноски'}
+          value={item.title ?? tr('Сноски')}
           onChange={(e) => patch({ title: e.target.value })}
         />
       </label>
       {sections.map((section, index) => (
         <fieldset className="disclosure-properties" key={section.id}>
-          <legend>Раздел {index + 1}</legend>
+          <legend>
+            {tr('Раздел') + ' '}
+            {index + 1}
+          </legend>
           <label className="property-field">
-            Заголовок
+            {tr('Заголовок')}
             <input
-              aria-label={`Заголовок раздела ${index + 1}`}
+              aria-label={tr('Заголовок раздела {0}', index + 1)}
               maxLength={500}
               value={section.title}
               onChange={(e) =>
@@ -39,7 +43,7 @@ export default function DisclosureProperties({
             />
           </label>
           <Numeric
-            label={`Высота текста раздела ${index + 1}`}
+            label={tr('Высота текста раздела {0}', index + 1)}
             value={section.height}
             min={60}
             max={1000}
@@ -51,19 +55,21 @@ export default function DisclosureProperties({
             disabled={sections.length <= 1}
             onClick={() => patch({ sections: sections.filter((s) => s.id !== section.id) })}
           >
-            Удалить раздел {index + 1}
+            {tr('Удалить раздел') + ' '}
+            {index + 1}
           </button>
         </fieldset>
       ))}
       <button
         disabled={sections.length >= 100}
-        onClick={() => patch({ sections: [...sections, createSection('Новый раздел')] })}
+        onClick={() => patch({ sections: [...sections, createSection(tr('Новый раздел'))] })}
       >
-        + Раздел
+        {tr('+ Раздел')}
       </button>
       <p className="panel-hint">
-        Нажмите заголовок на холсте, чтобы раскрыть раздел и написать текст. В режиме просмотра
-        разделы тоже раскрываются.
+        {tr(
+          'Нажмите заголовок на холсте, чтобы раскрыть раздел и написать текст. В режиме просмотра разделы тоже раскрываются.',
+        )}
       </p>
     </details>
   );

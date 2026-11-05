@@ -1,5 +1,6 @@
 import { defaultGlass } from '../../../domain/materials';
 import type { CanvasItem } from '../../../domain/scene';
+import { t as tr } from '../../../i18n/index';
 import Numeric from '../controls/NumericField';
 import { ShimmerSettings } from '../SnowShimmer';
 export default function MaterialProperties({
@@ -12,40 +13,40 @@ export default function MaterialProperties({
   const glass = item.glass ?? defaultGlass;
   return (
     <details open className="material-properties">
-      <summary>Материал и блестяшки</summary>
+      <summary>{tr('Материал и блестяшки')}</summary>
       <fieldset className="glass-settings">
-        <legend>Стекло</legend>
+        <legend>{tr('Стекло')}</legend>
         <label className="check-field">
           <input
             type="checkbox"
             checked={glass.enabled}
             onChange={(e) => patch({ glass: { ...glass, enabled: e.target.checked } })}
           />
-          Стеклянный материал
+          {tr('Стеклянный материал')}
         </label>
         {glass.enabled && (
           <>
             <p className="panel-hint">
-              Полупрозрачное стекло размывает содержимое позади букв или фигуры.
+              {tr('Полупрозрачное стекло размывает содержимое позади букв или фигуры.')}
             </p>
             <Numeric
-              label="Размытие стекла"
+              label={tr('Размытие стекла')}
               value={glass.blur}
               min={0}
               max={40}
               onChange={(blur) => patch({ glass: { ...glass, blur } })}
             />
             <Numeric
-              label="Плотность стекла, %"
+              label={tr('Плотность стекла, %')}
               value={Math.round(glass.opacity * 100)}
               min={0}
               max={100}
               onChange={(value) => patch({ glass: { ...glass, opacity: value / 100 } })}
             />
             <label className="property-field">
-              Оттенок стекла
+              {tr('Оттенок стекла')}
               <input
-                aria-label="Оттенок стекла"
+                aria-label={tr('Оттенок стекла')}
                 type="color"
                 value={glass.tint}
                 onChange={(e) => patch({ glass: { ...glass, tint: e.target.value } })}
@@ -57,9 +58,9 @@ export default function MaterialProperties({
       <ShimmerSettings
         value={item.shimmer}
         onChange={(shimmer) => patch({ shimmer })}
-        legend="Блестяшки объекта"
-        label="Мерцание текста или фигуры"
-        hint="Кристаллы видны только внутри букв и контура фигуры. Можно сочетать со стеклом."
+        legend={tr('Блестяшки объекта')}
+        label={tr('Мерцание текста или фигуры')}
+        hint={tr('Кристаллы видны только внутри букв и контура фигуры. Можно сочетать со стеклом.')}
       />
     </details>
   );

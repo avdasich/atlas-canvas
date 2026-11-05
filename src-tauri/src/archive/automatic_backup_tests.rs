@@ -71,7 +71,7 @@ fn successful_copy_keeps_only_five_newest_and_leaves_other_files_alone() {
 }
 
 #[test]
-fn orphaned_pending_is_removed_before_the_hourly_skip_without_touching_other_copies() {
+fn orphaned_auto_temps_are_removed_before_the_hourly_skip_without_touching_other_copies() {
     let source = dir();
     seed(&source);
     automatic_backup(&source).unwrap();
@@ -80,16 +80,24 @@ fn orphaned_pending_is_removed_before_the_hourly_skip_without_touching_other_cop
     let before_import = folder.join("before-import-example.atlas");
     let recovery = folder.join("recovery-example.atlas");
     let manual = folder.join("manual.atlas");
-    let partial = folder.join(".auto-interrupted.pending.partial");
+    let partial = folder.join("before-import-example.partial");
+    let recovery_partial = folder.join("recovery-example.partial");
+    let foreign_partial = folder.join("unrelated.partial");
+    let visible_auto_partial = folder.join("auto-visible.partial");
     let unrelated = folder.join(".manual.pending");
     let directory = folder.join(".auto-directory.pending");
+    let partial_directory = folder.join(".auto-directory.partial");
     fs::create_dir(&directory).unwrap();
+    fs::create_dir(&partial_directory).unwrap();
     let preserved = [
         completed,
         before_import,
         recovery,
         manual,
         partial,
+        recovery_partial,
+        foreign_partial,
+        visible_auto_partial,
         unrelated,
     ];
     for path in &preserved[1..] {
@@ -101,7 +109,7 @@ fn orphaned_pending_is_removed_before_the_hourly_skip_without_touching_other_cop
         .collect();
     let pending = [
         folder.join(".auto-interrupted.pending"),
-        folder.join(".auto-another.pending"),
+        folder.join(".auto-x.y.partial"),
     ];
     for path in &pending {
         fs::write(path, b"abandoned archive").unwrap();
@@ -138,11 +146,12 @@ fn orphaned_pending_is_removed_before_the_hourly_skip_without_touching_other_cop
         assert_eq!(fs::read(path).unwrap(), bytes);
     }
     assert!(directory.is_dir());
+    assert!(partial_directory.is_dir());
     fs::remove_dir_all(source).unwrap();
 }
 
 #[test]
-fn orphaned_pending_is_removed_even_when_the_atlas_has_no_content() {
+fn orphaned_auto_temp_is_removed_even_when_the_atlas_has_no_content() {
     let source = dir();
     drop(connect(&source).unwrap());
     let folder = source.join("backups");
@@ -151,6 +160,136 @@ fn orphaned_pending_is_removed_even_when_the_atlas_has_no_content() {
     fs::write(&pending, b"abandoned").unwrap();
     assert_eq!(automatic_backup(&source).unwrap(), None);
     assert!(!pending.exists());
+    fs::remove_dir_all(source).unwrap();
+}
+
+#[test]
+fn failed_temp_removal_does_not_block_other_removals_or_a_new_archive() {
+    let source = dir();
+    seed(&source);
+    let folder = source.join("backups");
+    fs::create_dir(&folder).unwrap();
+    let orphaned = [
+        folder.join(".auto-first.x.partial"),
+        folder.join(".auto-second.y.partial"),
+        folder.join(".auto-third.pending"),
+    ];
+    for path in &orphaned {
+        fs::write(path, b"orphaned").unwrap();
+    }
+    let mut attempts = Vec::new();
+
+    let warning = automatic_backup_using(
+        &source,
+        |dir, dest| write_archive(dir, dest, None),
+        |path| {
+            attempts.push(path.to_path_buf());
+            // Fail the first attempt regardless of directory enumeration order.
+            if attempts.len() == 1 {
+                Err(std::io::Error::from(std::io::ErrorKind::PermissionDenied))
+            } else {
+                fs::remove_file(path)
+            }
+        },
+    )
+    .expect("temp cleanup must not prevent a new archive")
+    .expect("the temp cleanup failure must be reported");
+
+    assert_eq!(attempts.len(), 3);
+    assert!(warning.contains(attempts[0].to_str().unwrap()));
+    for path in orphaned {
+        assert!(attempts.contains(&path));
+        assert_eq!(path.exists(), path == attempts[0]);
+    }
+    let files = automatic_backup_files(&folder).unwrap();
+    assert_eq!(files.len(), 1);
+    assert_eq!(
+        stage_archive(&files[0].path, &source.join("inspect"))
+            .unwrap()
+            .scenes
+            .len(),
+        1
+    );
+    fs::remove_dir_all(source).unwrap();
+}
+
+#[test]
+fn temp_cleanup_warning_is_returned_even_when_a_copy_is_skipped() {
+    for has_content in [false, true] {
+        let source = dir();
+        if has_content {
+            seed(&source);
+            automatic_backup(&source).unwrap();
+        } else {
+            drop(connect(&source).unwrap());
+        }
+        let folder = source.join("backups");
+        fs::create_dir_all(&folder).unwrap();
+        let blocked = folder.join(".auto-blocked.x.partial");
+        fs::write(&blocked, b"blocked").unwrap();
+        let warning = automatic_backup_using(
+            &source,
+            |_, _| panic!("an empty atlas or recent backup must skip archive creation"),
+            |_| Err(std::io::Error::from(std::io::ErrorKind::PermissionDenied)),
+        )
+        .expect("cleanup failure must be a warning even without a new archive")
+        .expect("the cleanup warning must not be lost on early return");
+        assert!(warning.contains(blocked.to_str().unwrap()));
+        assert_eq!(fs::read(&blocked).unwrap(), b"blocked");
+        assert_eq!(
+            automatic_backup_files(&folder).unwrap().len(),
+            usize::from(has_content)
+        );
+        fs::remove_dir_all(source).unwrap();
+    }
+}
+
+#[test]
+fn temp_cleanup_does_not_remove_files_created_by_the_current_worker() {
+    use std::cell::RefCell;
+    let source = dir();
+    seed(&source);
+    let folder = source.join("backups");
+    fs::create_dir(&folder).unwrap();
+    let orphaned = folder.join(".auto-orphaned.x.partial");
+    fs::write(&orphaned, b"orphaned").unwrap();
+    let active_partial = RefCell::new(None::<PathBuf>);
+    let mut removed = Vec::new();
+
+    assert_eq!(
+        automatic_backup_using(
+            &source,
+            |dir, dest| {
+                assert!(
+                    !orphaned.exists(),
+                    "cleanup must precede this worker's writes"
+                );
+                let partial = dest.with_extension("worker.partial");
+                fs::write(&partial, b"current worker").map_err(err)?;
+                *active_partial.borrow_mut() = Some(partial);
+                write_archive(dir, dest, None)
+            },
+            |path| {
+                removed.push(path.to_path_buf());
+                fs::remove_file(path)
+            },
+        )
+        .unwrap(),
+        None
+    );
+
+    assert_eq!(removed, [orphaned]);
+    let partial = active_partial.into_inner().unwrap();
+    assert_eq!(fs::read(partial).unwrap(), b"current worker");
+    let files = automatic_backup_files(&folder).unwrap();
+    assert_eq!(files.len(), 1);
+    assert_eq!(
+        stage_archive(&files[0].path, &source.join("inspect"))
+            .unwrap()
+            .scenes
+            .len(),
+        1
+    );
     fs::remove_dir_all(source).unwrap();
 }
 

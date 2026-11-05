@@ -59,7 +59,7 @@ function App() {
     };
     subscribe('atlas-backup-error', (error) => tr('Автокопия не создана: {0}', error));
     subscribe('atlas-backup-cleanup-warning', (error) =>
-      tr('Автокопия создана, но не удалось удалить старые копии: {0}', error),
+      tr('Не удалось полностью очистить папку автокопий: {0}', error),
     );
     return () => {
       cancelled = true;

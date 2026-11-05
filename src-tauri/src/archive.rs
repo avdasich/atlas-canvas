@@ -808,7 +808,7 @@ pub async fn apply_archive(
     Ok(result)
 }
 
-// An optional warning means the new archive exists, but pruning old copies failed.
+// Cleanup warnings do not block archive creation and are also returned when a copy is skipped.
 fn automatic_backup(dir: &Path) -> Result<Option<String>> {
     automatic_backup_using(
         dir,
@@ -817,25 +817,35 @@ fn automatic_backup(dir: &Path) -> Result<Option<String>> {
     )
 }
 
-fn remove_orphaned_pending_backups(folder: &Path) -> Result<()> {
+fn remove_orphaned_auto_temp_files(
+    folder: &Path,
+    remove: &mut impl FnMut(&Path) -> std::io::Result<()>,
+) -> Vec<String> {
     let entries = match fs::read_dir(folder) {
         Ok(entries) => entries,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
-        Err(error) => return Err(err(error)),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Vec::new(),
+        Err(error) => return vec![err(error)],
     };
+    let mut errors = Vec::new();
     // Called under BackupPermit, before this worker creates any temporary files.
     for entry in entries {
-        let entry = entry.map_err(err)?;
-        if entry
-            .file_name()
-            .to_str()
-            .is_some_and(|name| name.starts_with(".auto-") && name.ends_with(".pending"))
-            && entry.file_type().map_err(err)?.is_file()
-        {
-            fs::remove_file(entry.path()).map_err(err)?;
+        let result: Result<()> = (|| {
+            let entry = entry.map_err(err)?;
+            if entry.file_name().to_str().is_some_and(|name| {
+                name.starts_with(".auto-")
+                    && (name.ends_with(".pending") || name.ends_with(".partial"))
+            }) && entry.file_type().map_err(err)?.is_file()
+            {
+                remove(&entry.path())
+                    .map_err(|error| format!("{}: {error}", entry.path().display()))?;
+            }
+            Ok(())
+        })();
+        if let Err(error) = result {
+            errors.push(error);
         }
     }
-    Ok(())
+    errors
 }
 
 struct AutomaticBackupFile {
@@ -867,10 +877,10 @@ fn automatic_backup_files(folder: &Path) -> Result<Vec<AutomaticBackupFile>> {
 fn automatic_backup_using(
     dir: &Path,
     write: impl FnOnce(&Path, &Path) -> Result<()>,
-    mut remove_old: impl FnMut(&Path) -> std::io::Result<()>,
+    mut remove_file: impl FnMut(&Path) -> std::io::Result<()>,
 ) -> Result<Option<String>> {
     let folder = dir.join("backups");
-    remove_orphaned_pending_backups(&folder)?;
+    let mut cleanup_errors = remove_orphaned_auto_temp_files(&folder, &mut remove_file);
     let conn = connect(dir)?;
     let has_content: bool = conn
         .query_row(
@@ -880,7 +890,7 @@ fn automatic_backup_using(
         )
         .map_err(err)?;
     if !has_content {
-        return Ok(None);
+        return Ok(cleanup_warning(cleanup_errors));
     }
     let latest_change: Option<f64> = conn
         .query_row(
@@ -904,7 +914,7 @@ fn automatic_backup_using(
                     .map_err(err)?
                     .as_secs_f64())
     {
-        return Ok(None);
+        return Ok(cleanup_warning(cleanup_errors));
     }
     drop(conn);
 
@@ -938,12 +948,24 @@ fn automatic_backup_using(
             .rev()
             .skip(AUTOMATIC_BACKUP_LIMIT)
         {
-            remove_old(&old.path).map_err(err)?;
+            remove_file(&old.path).map_err(err)?;
         }
         Ok(())
     })();
-    Ok(cleanup.err())
+    if let Err(error) = cleanup {
+        cleanup_errors.push(error);
+    }
+    Ok(cleanup_warning(cleanup_errors))
 }
+
+fn cleanup_warning(errors: Vec<String>) -> Option<String> {
+    if errors.is_empty() {
+        None
+    } else {
+        Some(errors.join("\n"))
+    }
+}
+
 #[tauri::command]
 pub fn open_backup_folder(app: AppHandle) -> Result<()> {
     use tauri_plugin_opener::OpenerExt;

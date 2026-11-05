@@ -3,8 +3,8 @@ export const english: Record<string, string> = {
     'Could not determine when the canvas last changed.',
   'Не удалось завершить сохранение: {0}': 'Could not finish saving: {0}',
   'Автокопия не создана: {0}': 'Automatic backup failed: {0}',
-  'Автокопия создана, но не удалось удалить старые копии: {0}':
-    'Automatic backup created, but older copies could not be removed: {0}',
+  'Не удалось полностью очистить папку автокопий: {0}':
+    'Could not completely clean up the automatic backup folder: {0}',
   'Загрузка редактора…': 'Loading editor…',
   Закрыть: 'Close',
   'ВАШ ЛИЧНЫЙ АТЛАС': 'YOUR PERSONAL ATLAS',

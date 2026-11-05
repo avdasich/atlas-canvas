@@ -202,7 +202,7 @@ A full `.atlas` backup runs in the background after a changed canvas is saved, a
 
 On the first successful automatic backup after updating, automatic copies beyond 5 will be permanently deleted, starting with the oldest. Move any copies you want to keep out of the backup folder beforehand.
 
-Orphaned `.auto-*.pending` files from an interrupted archive are removed when the next background task runs after a canvas save. If a new copy was written but older copies could not be deleted, a cleanup warning appears; the new copy remains available and the folder may temporarily contain more than 5 copies.
+Orphaned automatic-backup temporary files (`.auto-*.pending` and `.auto-*.partial`) from an interrupted archive are removed at the start of the next background task after a canvas save. If one removal fails, the app tries the others and continues creating the archive, reporting a separate cleanup warning. If a new copy was written but older copies could not be deleted, a cleanup warning appears; the new copy remains available and the folder may temporarily contain more than 5 copies.
 
 **Saved** confirms the canvas write, not completion of its background backup. If you need a backup immediately, use **Export entire atlas** and wait for the successful export message.
 

@@ -3,6 +3,8 @@ export const english: Record<string, string> = {
     'Could not determine when the canvas last changed.',
   'Не удалось завершить сохранение: {0}': 'Could not finish saving: {0}',
   'Автокопия не создана: {0}': 'Automatic backup failed: {0}',
+  'Автокопия создана, но не удалось удалить старые копии: {0}':
+    'Automatic backup created, but older copies could not be removed: {0}',
   'Загрузка редактора…': 'Loading editor…',
   Закрыть: 'Close',
   'ВАШ ЛИЧНЫЙ АТЛАС': 'YOUR PERSONAL ATLAS',
@@ -82,6 +84,8 @@ export const english: Record<string, string> = {
   'Папка резервных копий': 'Backup folder',
   'Автоматические копии создаются в фоне при сохранении, не чаще раза в час после изменений холстов. Хранятся последние 5 копий; старые удаляются только после успешной записи новой. Ручные экспорты не удаляются.':
     'Automatic backups run in the background after canvas changes, at most once per hour. The latest 5 are kept; older copies are removed only after a new one is saved successfully. Manual exports are not deleted.',
+  'Перед экспортом откройте и перенесите прежние холсты из localStorage.':
+    'Migrate any legacy canvases before exporting.',
   'Проверка архива завершена': 'Archive verified',
   'стран ·': 'countries ·',
   вложений: 'attachments',

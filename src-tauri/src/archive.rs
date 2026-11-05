@@ -98,8 +98,15 @@ impl AutomaticBackups {
 
 pub(crate) fn schedule_automatic_backup(app: AppHandle, dir: PathBuf) {
     let worker_app = app.clone();
+    let warning_app = app.clone();
     app.state::<AutomaticBackups>().spawn(
-        move || automatic_backup(&dir),
+        move || {
+            if let Some(warning) = automatic_backup(&dir)? {
+                use tauri::Emitter;
+                let _ = warning_app.emit("atlas-backup-cleanup-warning", warning);
+            }
+            Ok(())
+        },
         move |error| {
             use tauri::Emitter;
             let _ = worker_app.emit("atlas-backup-error", error);
@@ -801,8 +808,34 @@ pub async fn apply_archive(
     Ok(result)
 }
 
-pub(crate) fn automatic_backup(dir: &Path) -> Result<()> {
-    automatic_backup_using(dir, |dir, dest| write_archive(dir, dest, None))
+// An optional warning means the new archive exists, but pruning old copies failed.
+fn automatic_backup(dir: &Path) -> Result<Option<String>> {
+    automatic_backup_using(
+        dir,
+        |dir, dest| write_archive(dir, dest, None),
+        |path| fs::remove_file(path),
+    )
+}
+
+fn remove_orphaned_pending_backups(folder: &Path) -> Result<()> {
+    let entries = match fs::read_dir(folder) {
+        Ok(entries) => entries,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(error) => return Err(err(error)),
+    };
+    // Called under BackupPermit, before this worker creates any temporary files.
+    for entry in entries {
+        let entry = entry.map_err(err)?;
+        if entry
+            .file_name()
+            .to_str()
+            .is_some_and(|name| name.starts_with(".auto-") && name.ends_with(".pending"))
+            && entry.file_type().map_err(err)?.is_file()
+        {
+            fs::remove_file(entry.path()).map_err(err)?;
+        }
+    }
+    Ok(())
 }
 
 struct AutomaticBackupFile {
@@ -834,7 +867,10 @@ fn automatic_backup_files(folder: &Path) -> Result<Vec<AutomaticBackupFile>> {
 fn automatic_backup_using(
     dir: &Path,
     write: impl FnOnce(&Path, &Path) -> Result<()>,
-) -> Result<()> {
+    mut remove_old: impl FnMut(&Path) -> std::io::Result<()>,
+) -> Result<Option<String>> {
+    let folder = dir.join("backups");
+    remove_orphaned_pending_backups(&folder)?;
     let conn = connect(dir)?;
     let has_content: bool = conn
         .query_row(
@@ -844,7 +880,7 @@ fn automatic_backup_using(
         )
         .map_err(err)?;
     if !has_content {
-        return Ok(());
+        return Ok(None);
     }
     let latest_change: Option<f64> = conn
         .query_row(
@@ -855,7 +891,6 @@ fn automatic_backup_using(
         .map_err(err)?;
     let latest_change =
         latest_change.ok_or("Не удалось определить время последнего изменения холста.")?;
-    let folder = dir.join("backups");
     fs::create_dir_all(&folder).map_err(err)?;
     if let Some(recent) = automatic_backup_files(&folder)?.last()
         && (recent
@@ -869,7 +904,7 @@ fn automatic_backup_using(
                     .map_err(err)?
                     .as_secs_f64())
     {
-        return Ok(());
+        return Ok(None);
     }
     drop(conn);
 
@@ -889,20 +924,25 @@ fn automatic_backup_using(
             .map_err(err)?;
         // The final auto-*.atlas name is visible only after all writes have succeeded,
         // including on filesystems where write_archive falls back from hard links.
-        fs::rename(&pending, &destination).map_err(err)?;
+        fs::rename(&pending, &destination).map_err(err)
+    })();
+    if let Err(error) = result {
+        let _ = fs::remove_file(pending);
+        return Err(error);
+    }
+
+    // A pruning error must not be reported as a failed archive write.
+    let cleanup: Result<()> = (|| {
         for old in automatic_backup_files(&folder)?
             .into_iter()
             .rev()
             .skip(AUTOMATIC_BACKUP_LIMIT)
         {
-            fs::remove_file(old.path).map_err(err)?;
+            remove_old(&old.path).map_err(err)?;
         }
         Ok(())
     })();
-    if result.is_err() {
-        let _ = fs::remove_file(pending);
-    }
-    result
+    Ok(cleanup.err())
 }
 #[tauri::command]
 pub fn open_backup_folder(app: AppHandle) -> Result<()> {

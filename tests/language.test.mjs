@@ -89,6 +89,14 @@ test('queued and native errors translate only known messages and preserve paths'
     ),
     'Automatic backup failed: Could not determine when the canvas last changed.',
   );
+  assert.equal(
+    t('Автокопия создана, но не удалось удалить старые копии: {0}', 'permission denied'),
+    'Automatic backup created, but older copies could not be removed: permission denied',
+  );
+  assert.equal(
+    t('Перед экспортом откройте и перенесите прежние холсты из localStorage.'),
+    'Migrate any legacy canvases before exporting.',
+  );
   assert.equal(translateMessage('/tmp/Сохранено.png'), '/tmp/Сохранено.png');
   setLanguage('ru');
   assert.equal(translateMessage('Saved'), 'Сохранено');

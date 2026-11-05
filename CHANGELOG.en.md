@@ -5,7 +5,8 @@
 ## Unreleased
 
 - Automatic backups run outside the canvas save path, at most once per hour and only after canvas changes. Only one backup worker runs at a time; errors retain the existing notification.
-- Keep the latest 5 automatic archives, pruning only after a successful new copy. Manual exports, pre-restore copies and temporary files are excluded from retention.
+- Keep the latest 5 automatic archives, pruning only after a successful new copy. On the first successful automatic backup after updating, automatic copies beyond 5 will be permanently deleted. Manual exports and pre-restore copies are excluded from retention.
+- Orphaned `.auto-*.pending` files are removed when the next background task runs, including when it skips creating a copy. Failure to remove older copies after writing a new one is reported as a cleanup warning.
 
 ## 0.4.2
 

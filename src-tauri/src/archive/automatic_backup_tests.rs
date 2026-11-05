@@ -35,9 +35,8 @@ fn successful_copy_keeps_only_five_newest_and_leaves_other_files_alone() {
     let folder = source.join("backups");
     let manual = folder.join("manual.atlas");
     let partial = folder.join("auto-old.atlas.partial");
-    let pending = folder.join(".auto-interrupted.pending");
     let other = folder.join("auto-not-an-archive.txt");
-    for path in [&manual, &partial, &pending, &other] {
+    for path in [&manual, &partial, &other] {
         fs::write(path, b"leave this file alone").unwrap();
     }
     let directory = folder.join("auto-directory.atlas");
@@ -64,10 +63,130 @@ fn successful_copy_keeps_only_five_newest_and_leaves_other_files_alone() {
             .len(),
         1
     );
-    for path in [&manual, &partial, &pending, &other] {
+    for path in [&manual, &partial, &other] {
         assert_eq!(fs::read(path).unwrap(), b"leave this file alone");
     }
     assert!(directory.is_dir());
+    fs::remove_dir_all(source).unwrap();
+}
+
+#[test]
+fn orphaned_pending_is_removed_before_the_hourly_skip_without_touching_other_copies() {
+    let source = dir();
+    seed(&source);
+    automatic_backup(&source).unwrap();
+    let folder = source.join("backups");
+    let completed = automatic_backup_files(&folder).unwrap().remove(0).path;
+    let before_import = folder.join("before-import-example.atlas");
+    let recovery = folder.join("recovery-example.atlas");
+    let manual = folder.join("manual.atlas");
+    let partial = folder.join(".auto-interrupted.pending.partial");
+    let unrelated = folder.join(".manual.pending");
+    let directory = folder.join(".auto-directory.pending");
+    fs::create_dir(&directory).unwrap();
+    let preserved = [
+        completed,
+        before_import,
+        recovery,
+        manual,
+        partial,
+        unrelated,
+    ];
+    for path in &preserved[1..] {
+        fs::write(path, b"keep").unwrap();
+    }
+    let original: Vec<_> = preserved
+        .iter()
+        .map(|path| fs::read(path).unwrap())
+        .collect();
+    let pending = [
+        folder.join(".auto-interrupted.pending"),
+        folder.join(".auto-another.pending"),
+    ];
+    for path in &pending {
+        fs::write(path, b"abandoned archive").unwrap();
+    }
+
+    let (done_tx, done_rx) = mpsc::channel();
+    let worker_source = source.clone();
+    let jobs = AutomaticBackups::default();
+    let running = Arc::clone(&jobs.running);
+    assert!(jobs.spawn(
+        move || {
+            assert!(running.load(Ordering::Acquire));
+            let outcome = automatic_backup_using(
+                &worker_source,
+                |_, _| panic!("the latest backup is still within the hourly interval"),
+                |path| fs::remove_file(path),
+            );
+            done_tx.send(outcome).unwrap();
+            Ok(())
+        },
+        |_| panic!("the backup must not fail"),
+    ));
+    assert_eq!(
+        done_rx
+            .recv_timeout(Duration::from_secs(5))
+            .unwrap()
+            .unwrap(),
+        None
+    );
+    for path in pending {
+        assert!(!path.exists());
+    }
+    for (path, bytes) in preserved.iter().zip(original) {
+        assert_eq!(fs::read(path).unwrap(), bytes);
+    }
+    assert!(directory.is_dir());
+    fs::remove_dir_all(source).unwrap();
+}
+
+#[test]
+fn orphaned_pending_is_removed_even_when_the_atlas_has_no_content() {
+    let source = dir();
+    drop(connect(&source).unwrap());
+    let folder = source.join("backups");
+    fs::create_dir(&folder).unwrap();
+    let pending = folder.join(".auto-interrupted.pending");
+    fs::write(&pending, b"abandoned").unwrap();
+    assert_eq!(automatic_backup(&source).unwrap(), None);
+    assert!(!pending.exists());
+    fs::remove_dir_all(source).unwrap();
+}
+
+#[test]
+fn failed_pruning_reports_a_warning_after_publishing_a_valid_archive() {
+    let source = dir();
+    seed(&source);
+    let old = old_backups(&source, 5);
+    let before: Vec<_> = old.iter().map(|path| fs::read(path).unwrap()).collect();
+    let warning = automatic_backup_using(
+        &source,
+        |dir, dest| write_archive(dir, dest, None),
+        |_| Err(std::io::Error::from(std::io::ErrorKind::PermissionDenied)),
+    )
+    .expect("a pruning failure is not an archive-write failure")
+    .expect("the cleanup warning must be returned");
+    assert_eq!(
+        warning,
+        std::io::Error::from(std::io::ErrorKind::PermissionDenied).to_string()
+    );
+    let files = automatic_backup_files(&source.join("backups")).unwrap();
+    assert_eq!(files.len(), 6);
+    let created = files
+        .iter()
+        .find(|entry| !old.contains(&entry.path))
+        .unwrap();
+    assert_eq!(
+        stage_archive(&created.path, &source.join("inspect"))
+            .unwrap()
+            .scenes
+            .len(),
+        1
+    );
+    for (path, bytes) in old.iter().zip(before) {
+        assert_eq!(fs::read(path).unwrap(), bytes);
+    }
     fs::remove_dir_all(source).unwrap();
 }
 
@@ -89,9 +208,11 @@ fn unchanged_scenes_skip_a_copy_even_after_the_hour_has_elapsed() {
     touch(&previous, SystemTime::now() - Duration::from_secs(7200));
     let bytes = fs::read(&previous).unwrap();
 
-    automatic_backup_using(&source, |_, _| {
-        panic!("unchanged scenes must not be archived")
-    })
+    automatic_backup_using(
+        &source,
+        |_, _| panic!("unchanged scenes must not be archived"),
+        |path| fs::remove_file(path),
+    )
     .unwrap();
 
     assert_eq!(automatic_backup_files(&folder).unwrap().len(), 1);
@@ -111,7 +232,12 @@ fn changed_scenes_are_still_limited_to_one_copy_per_hour() {
     )
     .unwrap();
     drop(conn);
-    automatic_backup_using(&source, |_, _| panic!("the hourly limit must still apply")).unwrap();
+    automatic_backup_using(
+        &source,
+        |_, _| panic!("the hourly limit must still apply"),
+        |path| fs::remove_file(path),
+    )
+    .unwrap();
     assert_eq!(
         automatic_backup_files(&source.join("backups"))
             .unwrap()
@@ -127,10 +253,14 @@ fn failed_write_keeps_all_previous_backups_and_does_not_publish_a_partial_copy()
     seed(&source);
     let old = old_backups(&source, 8);
     let before: Vec<_> = old.iter().map(|path| fs::read(path).unwrap()).collect();
-    let result = automatic_backup_using(&source, |_, pending| {
-        fs::write(pending, b"incomplete archive").map_err(err)?;
-        Err(std::io::Error::from(std::io::ErrorKind::WriteZero).to_string())
-    });
+    let result = automatic_backup_using(
+        &source,
+        |_, pending| {
+            fs::write(pending, b"incomplete archive").map_err(err)?;
+            Err(std::io::Error::from(std::io::ErrorKind::WriteZero).to_string())
+        },
+        |path| fs::remove_file(path),
+    );
     assert!(result.is_err());
     assert_eq!(fs::read_dir(source.join("backups")).unwrap().count(), 8);
     for (path, expected) in old.iter().zip(before) {
@@ -145,21 +275,25 @@ fn changes_during_archiving_are_not_hidden_by_the_completion_timestamp() {
     seed(&source);
     let change_time = SystemTime::now() + Duration::from_secs(30);
     let completion_time = change_time + Duration::from_secs(30);
-    automatic_backup_using(&source, |dir, pending| {
-        write_archive(dir, pending, None)?;
-        // Simulate a save during a long archive write without sleeping in the test.
-        connect(dir)?
-            .execute(
-                "UPDATE scenes SET updated_at=strftime('%Y-%m-%dT%H:%M:%fZ', ?1, 'unixepoch')",
-                [change_time
-                    .duration_since(UNIX_EPOCH)
-                    .unwrap()
-                    .as_secs_f64()],
-            )
-            .map_err(err)?;
-        touch(pending, completion_time);
-        Ok(())
-    })
+    automatic_backup_using(
+        &source,
+        |dir, pending| {
+            write_archive(dir, pending, None)?;
+            // Simulate a save during a long archive write without sleeping in the test.
+            connect(dir)?
+                .execute(
+                    "UPDATE scenes SET updated_at=strftime('%Y-%m-%dT%H:%M:%fZ', ?1, 'unixepoch')",
+                    [change_time
+                        .duration_since(UNIX_EPOCH)
+                        .unwrap()
+                        .as_secs_f64()],
+                )
+                .map_err(err)?;
+            touch(pending, completion_time);
+            Ok(())
+        },
+        |path| fs::remove_file(path),
+    )
     .unwrap();
     let files = automatic_backup_files(&source.join("backups")).unwrap();
     assert!(files[0].modified < change_time);

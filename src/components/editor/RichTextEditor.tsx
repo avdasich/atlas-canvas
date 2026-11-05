@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import type { RichRun } from '../../domain/richText';
 import type { CanvasItem } from '../../domain/scene';
 import { validUrl } from '../../domain/scene';
+import { t as tr, translateMessage } from '../../i18n/index';
 function readRuns(root: HTMLElement): RichRun[] {
   const runs: RichRun[] = [];
   const add = (text: string, style: Omit<RichRun, 'text'>) => {
@@ -121,7 +122,7 @@ export default function RichTextEditor({
         contentEditable
         suppressContentEditableWarning
         role="textbox"
-        aria-label="Текст заметки"
+        aria-label={tr('Текст заметки')}
         aria-multiline="true"
         style={{
           width: item.width ?? 300,
@@ -156,18 +157,18 @@ export default function RichTextEditor({
           if (!(e.target instanceof HTMLInputElement)) e.preventDefault();
         }}
       >
-        <button aria-label="Жирный фрагмент" onClick={() => command('bold')}>
-          Ж
+        <button aria-label={tr('Жирный фрагмент')} onClick={() => command('bold')}>
+          {tr('Ж')}
         </button>
-        <button aria-label="Курсив фрагмента" onClick={() => command('italic')}>
-          К
+        <button aria-label={tr('Курсив фрагмента')} onClick={() => command('italic')}>
+          {tr('К')}
         </button>
-        <button aria-label="Подчеркнуть фрагмент" onClick={() => command('underline')}>
-          Ч
+        <button aria-label={tr('Подчеркнуть фрагмент')} onClick={() => command('underline')}>
+          {tr('Ч')}
         </button>
-        <button onClick={() => command('insertUnorderedList')}>Список</button>
+        <button onClick={() => command('insertUnorderedList')}>{tr('Список')}</button>
         <input
-          aria-label="Ссылка фрагмента"
+          aria-label={tr('Ссылка фрагмента')}
           placeholder="https://…"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
@@ -175,14 +176,14 @@ export default function RichTextEditor({
         <button
           onClick={() => {
             if (!validUrl(url)) {
-              setError('Укажите полный http/https адрес');
+              setError(tr('Укажите полный http/https адрес'));
               return;
             }
             command('createLink', url);
             setError('');
           }}
         >
-          Ссылка
+          {tr('Ссылка')}
         </button>
         <button
           onClick={() => {
@@ -190,11 +191,11 @@ export default function RichTextEditor({
             onFinish(false);
           }}
         >
-          Готово
+          {tr('Готово')}
         </button>
       </div>
-      {error && <p role="alert">{error}</p>}
-      <span>⌘/Ctrl + Enter — готово · Esc — отмена</span>
+      {error && <p role="alert">{translateMessage(error)}</p>}
+      <span>{tr('⌘/Ctrl + Enter — готово · Esc — отмена')}</span>
     </div>
   );
 }

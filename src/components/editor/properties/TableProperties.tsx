@@ -8,6 +8,7 @@ import {
   removeRow,
   splitCell,
 } from '../../../domain/table';
+import { t as tr } from '../../../i18n/index';
 import Numeric from '../controls/NumericField';
 import type { CellSelection } from '../DomObjects';
 import TableStyles from '../TableStyles';
@@ -36,7 +37,7 @@ export default function TableProperties({
   };
   return (
     <details open className="table-properties">
-      <summary>Таблица</summary>
+      <summary>{tr('Таблица')}</summary>
       <TableStyles
         table={table}
         fontFamily={item?.fontFamily ?? theme.fontFamily}
@@ -44,25 +45,25 @@ export default function TableProperties({
       />
       <div className="panel-actions">
         <button disabled={table.cells.length >= 200} onClick={() => setTable(addRow(table))}>
-          + Строка
+          {tr('+ Строка')}
         </button>
         <button
           disabled={table.columnWidths.length >= 50}
           onClick={() => setTable(addColumn(table))}
         >
-          + Столбец
+          {tr('+ Столбец')}
         </button>
         <button
           disabled={!cell || table.cells.length <= 1}
           onClick={() => cell && setTable(removeRow(table, cell.row))}
         >
-          Удалить строку
+          {tr('Удалить строку')}
         </button>
         <button
           disabled={!cell || table.columnWidths.length <= 1}
           onClick={() => cell && setTable(removeColumn(table, cell.column))}
         >
-          Удалить столбец
+          {tr('Удалить столбец')}
         </button>
       </div>
       <label className="check-field">
@@ -71,10 +72,10 @@ export default function TableProperties({
           checked={table.header}
           onChange={(e) => setTable({ ...table, header: e.target.checked })}
         />
-        Выделять первую строку
+        {tr('Выделять первую строку')}
       </label>
       <label className="property-field">
-        Фон таблицы
+        {tr('Фон таблицы')}
         <input
           type="color"
           value={table.background}
@@ -82,7 +83,7 @@ export default function TableProperties({
         />
       </label>
       <label className="property-field">
-        Границы
+        {tr('Границы')}
         <input
           type="color"
           value={table.borderColor}
@@ -90,28 +91,28 @@ export default function TableProperties({
         />
       </label>
       <Numeric
-        label="Толщина границ"
+        label={tr('Толщина границ')}
         value={table.borderWidth}
         min={0}
         max={20}
         onChange={(borderWidth) => setTable({ ...table, borderWidth })}
       />
       <Numeric
-        label="Шрифт таблицы"
+        label={tr('Шрифт таблицы')}
         value={table.fontSize}
         min={6}
         max={200}
         onChange={(fontSize) => setTable({ ...table, fontSize })}
       />
       <Numeric
-        label="Отступ ячеек"
+        label={tr('Отступ ячеек')}
         value={table.padding}
         min={0}
         max={100}
         onChange={(padding) => setTable({ ...table, padding })}
       />
       <Numeric
-        label="Скругление таблицы"
+        label={tr('Скругление таблицы')}
         value={table.radius}
         min={0}
         max={100}
@@ -120,19 +121,20 @@ export default function TableProperties({
       {cell && cell.row < table.cells.length && cell.column < table.columnWidths.length && (
         <fieldset>
           <legend>
-            Ячейка {cell.row + 1}:{cell.column + 1}
+            {tr('Ячейка') + ' '}
+            {cell.row + 1}:{cell.column + 1}
           </legend>
           <label className="property-field">
-            Фон ячейки
+            {tr('Фон ячейки')}
             <input
-              aria-label="Фон ячейки"
+              aria-label={tr('Фон ячейки')}
               type="color"
               value={table.cells[cell.row][cell.column].fill ?? table.background}
               onChange={(e) => cellStyle({ fill: e.target.value })}
             />
           </label>
           <label className="property-field">
-            Цвет текста ячейки
+            {tr('Цвет текста ячейки')}
             <input
               type="color"
               value={table.cells[cell.row][cell.column].color ?? table.color}
@@ -140,15 +142,15 @@ export default function TableProperties({
             />
           </label>
           <label className="property-field">
-            Выравнивание ячейки
+            {tr('Выравнивание ячейки')}
             <select
-              aria-label="Выравнивание ячейки"
+              aria-label={tr('Выравнивание ячейки')}
               value={table.cells[cell.row][cell.column].align ?? 'left'}
               onChange={(e) => cellStyle({ align: e.target.value as CellStyle['align'] })}
             >
-              <option value="left">Слева</option>
-              <option value="center">По центру</option>
-              <option value="right">Справа</option>
+              <option value="left">{tr('Слева')}</option>
+              <option value="center">{tr('По центру')}</option>
+              <option value="right">{tr('Справа')}</option>
             </select>
           </label>
           <div className="panel-actions">
@@ -170,7 +172,7 @@ export default function TableProperties({
                 );
               }}
             >
-              Объединить с ячейкой справа
+              {tr('Объединить с ячейкой справа')}
             </button>
             <button
               disabled={
@@ -189,23 +191,23 @@ export default function TableProperties({
                 );
               }}
             >
-              Объединить с ячейкой снизу
+              {tr('Объединить с ячейкой снизу')}
             </button>
             <button
               disabled={!mergeAt(table, cell.row, cell.column)}
               onClick={() => setTable(splitCell(table, cell.row, cell.column))}
             >
-              Разделить ячейки
+              {tr('Разделить ячейки')}
             </button>
           </div>
           <p className="panel-hint">
-            Текст скрытых ячеек сохраняется и возвращается при разделении.
+            {tr('Текст скрытых ячеек сохраняется и возвращается при разделении.')}
           </p>
           <button onClick={() => cellStyle({ bold: !table.cells[cell.row][cell.column].bold })}>
-            Жирный текст ячейки
+            {tr('Жирный текст ячейки')}
           </button>
           <Numeric
-            label="Ширина столбца"
+            label={tr('Ширина столбца')}
             value={table.columnWidths[cell.column]}
             min={40}
             max={2000}
@@ -217,7 +219,7 @@ export default function TableProperties({
             }
           />
           <Numeric
-            label="Высота строки"
+            label={tr('Высота строки')}
             value={table.rowHeights[cell.row]}
             min={24}
             max={2000}

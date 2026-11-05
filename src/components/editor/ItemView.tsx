@@ -15,6 +15,7 @@ import {
 import { sourceCrop } from '../../domain/crop';
 import { dimensions } from '../../domain/geometry';
 import type { CanvasItem } from '../../domain/scene';
+import { t as tr } from '../../i18n/index';
 import { repository } from '../../services/SceneRepository';
 import { richLayout, textConfig } from '../../services/textLayout';
 
@@ -71,7 +72,7 @@ function StoredImage({ item, common }: { item: CanvasItem; common: ShapeConfig }
           listening={false}
           {...size}
           fill={error ? '#a12828' : '#536576'}
-          text={error ? 'Фото недоступно\nОригинал не удалён' : 'Загрузка фото…'}
+          text={error ? tr('Фото недоступно Оригинал не удалён') : tr('Загрузка фото…')}
           fontSize={16}
           padding={16}
         />

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { CanvasItem } from '../../domain/scene';
 import { searchItems } from '../../domain/search';
+import { t as tr } from '../../i18n/index';
 export default function SearchPanel({
   items,
   onChoose,
@@ -13,13 +14,13 @@ export default function SearchPanel({
   const [query, setQuery] = useState('');
   const results = searchItems(items, query);
   return (
-    <section className="canvas-search" aria-label="Поиск по холсту">
+    <section className="canvas-search" aria-label={tr('Поиск по холсту')}>
       <div className="search-row">
         <input
           autoFocus
-          aria-label="Поиск по записям"
+          aria-label={tr('Поиск по записям')}
           value={query}
-          placeholder="Заметки, таблицы, сноски и ссылки…"
+          placeholder={tr('Заметки, таблицы, сноски и ссылки…')}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => {
             e.stopPropagation();
@@ -27,7 +28,7 @@ export default function SearchPanel({
             if (e.key === 'Enter' && results[0]) onChoose(results[0].item, results[0].sectionId);
           }}
         />
-        <button aria-label="Закрыть поиск" onClick={onClose}>
+        <button aria-label={tr('Закрыть поиск')} onClick={onClose}>
           ×
         </button>
       </div>
@@ -36,18 +37,18 @@ export default function SearchPanel({
           <button key={item.id} onClick={() => onChoose(item, sectionId)}>
             <small>
               {item.kind === 'table'
-                ? 'Таблица'
+                ? tr('Таблица')
                 : item.kind === 'note'
-                  ? 'Заметка'
+                  ? tr('Заметка')
                   : item.kind === 'disclosure'
-                    ? 'Сноски'
-                    : 'Объект'}
-              {item.hidden ? ' · скрыт' : ''}
+                    ? tr('Сноски')
+                    : tr('Объект')}
+              {item.hidden ? tr('· скрыт') : ''}
             </small>
             {excerpt}
           </button>
         ))}
-        {query.trim() && !results.length && <p>Совпадений нет</p>}
+        {query.trim() && !results.length && <p>{tr('Совпадений нет')}</p>}
       </div>
     </section>
   );

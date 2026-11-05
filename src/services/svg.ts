@@ -1,9 +1,10 @@
+import { t as tr } from '../i18n/index';
 export function sanitizeSvg(source: string): { svg: string; width: number; height: number } {
   if (/<!DOCTYPE|<!ENTITY/i.test(source))
-    throw new Error('SVG с внешними сущностями не поддерживается.');
+    throw new Error(tr('SVG с внешними сущностями не поддерживается.'));
   const document = new DOMParser().parseFromString(source, 'image/svg+xml');
   if (document.querySelector('parsererror') || document.documentElement.localName !== 'svg')
-    throw new Error('Повреждён SVG.');
+    throw new Error(tr('Повреждён SVG.'));
   const root = document.documentElement;
   const allowed = new Set([
     'svg',
@@ -103,7 +104,7 @@ export function sanitizeSvg(source: string): { svg: string; width: number; heigh
   const w = parseFloat(root.getAttribute('width') ?? '') || box?.[2] || 800,
     h = parseFloat(root.getAttribute('height') ?? '') || box?.[3] || 600;
   if (!Number.isFinite(w + h) || w <= 0 || h <= 0 || w > 100000 || h > 100000)
-    throw new Error('Недопустимый размер SVG.');
+    throw new Error(tr('Недопустимый размер SVG.'));
   const scale = Math.min(1, 4096 / w, 4096 / h),
     width = Math.max(1, Math.round(w * scale)),
     height = Math.max(1, Math.round(h * scale));
@@ -114,14 +115,14 @@ export function sanitizeSvg(source: string): { svg: string; width: number; heigh
   return { svg: new XMLSerializer().serializeToString(root), width, height };
 }
 export async function rasterizeSvg(file: File): Promise<File> {
-  if (file.size > 5 * 1024 * 1024) throw new Error('SVG превышает 5 МиБ.');
+  if (file.size > 5 * 1024 * 1024) throw new Error(tr('SVG превышает 5 МиБ.'));
   const safe = sanitizeSvg(await file.text()),
     url = URL.createObjectURL(new Blob([safe.svg], { type: 'image/svg+xml' }));
   try {
     const image = await new Promise<HTMLImageElement>((resolve, reject) => {
       const image = new Image();
       image.onload = () => resolve(image);
-      image.onerror = () => reject(new Error('Не удалось преобразовать SVG'));
+      image.onerror = () => reject(new Error(tr('Не удалось преобразовать SVG')));
       image.src = url;
     });
     const canvas = document.createElement('canvas');
@@ -130,7 +131,7 @@ export async function rasterizeSvg(file: File): Promise<File> {
     canvas.getContext('2d')!.drawImage(image, 0, 0);
     const png = await new Promise<Blob>((resolve, reject) =>
       canvas.toBlob(
-        (b) => (b ? resolve(b) : reject(new Error('Не удалось сохранить SVG как PNG'))),
+        (b) => (b ? resolve(b) : reject(new Error(tr('Не удалось сохранить SVG как PNG')))),
         'image/png',
       ),
     );

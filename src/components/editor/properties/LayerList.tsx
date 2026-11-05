@@ -1,4 +1,5 @@
 import type { CanvasItem } from '../../../domain/scene';
+import { t as tr } from '../../../i18n/index';
 export default function LayerList({
   items,
   selected,
@@ -12,7 +13,10 @@ export default function LayerList({
 }) {
   return (
     <details className="layers-panel">
-      <summary>Слои · {items.length}</summary>
+      <summary>
+        {tr('Слои ·') + ' '}
+        {items.length}
+      </summary>
       {[...items].reverse().map((i) => (
         <div className="layer-row" key={i.id}>
           <button onClick={() => select(i.id)} aria-pressed={selected.some((s) => s.id === i.id)}>
@@ -20,7 +24,7 @@ export default function LayerList({
             {i.locked ? ' 🔒' : ''}
           </button>
           <button
-            aria-label={`${i.hidden ? 'Показать' : 'Скрыть'} объект ${i.id}`}
+            aria-label={tr('{0} объект {1}', i.hidden ? tr('Показать') : tr('Скрыть'), i.id)}
             onClick={() => toggleHidden(i.id)}
           >
             {i.hidden ? '○' : '●'}

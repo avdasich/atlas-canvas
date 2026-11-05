@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { defaultShimmer, drawShimmer, snowCrystals, type Shimmer } from '../../domain/shimmer';
+import { t as tr } from '../../i18n/index';
 
 export function ShimmerSettings({
   value,
   onChange,
-  legend = 'Эффект фона',
-  label = 'Снежное переливание',
-  hint = 'Мелкие кристаллы плавно мерцают поверх выбранного фона.',
+  legend = tr('Эффект фона'),
+  label = tr('Снежное переливание'),
+  hint = tr('Мелкие кристаллы плавно мерцают поверх выбранного фона.'),
 }: {
   value?: Shimmer;
   legend?: string;
@@ -38,9 +39,10 @@ export function ShimmerSettings({
         <>
           <p className="panel-hint">{hint}</p>
           <label className="property-field">
-            Интенсивность · {Math.round(s.intensity * 100)}%
+            {tr('Интенсивность ·') + ' '}
+            {Math.round(s.intensity * 100)}%
             <input
-              aria-label="Интенсивность переливания"
+              aria-label={tr('Интенсивность переливания')}
               type="range"
               min={0}
               max={1}
@@ -50,9 +52,9 @@ export function ShimmerSettings({
             />
           </label>
           <label className="property-field">
-            Скорость
+            {tr('Скорость')}
             <input
-              aria-label="Скорость переливания"
+              aria-label={tr('Скорость переливания')}
               type="range"
               min={0.1}
               max={2}
@@ -62,9 +64,9 @@ export function ShimmerSettings({
             />
           </label>
           <label className="property-field">
-            Цвет кристаллов
+            {tr('Цвет кристаллов')}
             <input
-              aria-label="Цвет кристаллов"
+              aria-label={tr('Цвет кристаллов')}
               type="color"
               value={s.color}
               onChange={(e) => onChange({ ...s, color: e.target.value })}
@@ -72,7 +74,7 @@ export function ShimmerSettings({
           </label>
           {reduced && (
             <p role="status" className="panel-hint">
-              В системе уменьшена анимация: кристаллы отображаются без движения.
+              {tr('В системе уменьшена анимация: кристаллы отображаются без движения.')}
             </p>
           )}
         </>

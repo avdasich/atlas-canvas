@@ -1,6 +1,7 @@
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { useEffect, useState } from 'react';
 import { parseScene, type Scene } from '../../domain/scene';
+import { formatDate, t as tr, translateMessage } from '../../i18n/index';
 import { flushBeforeExit } from '../../services/exitGuard';
 type Revision = { id: number; createdAt: string; objects: number };
 export default function RevisionsPanel({
@@ -24,23 +25,30 @@ export default function RevisionsPanel({
   }, [countryId]);
   return (
     <div className="dialog-backdrop">
-      <section role="dialog" aria-modal="true" aria-label="Версии холста" className="app-dialog">
-        <h2>Версии холста</h2>
-        <p>Выберите сохранённую версию. Текущее содержимое останется в истории сохранений.</p>
-        {!isTauri() && <p>История сохранений доступна в настольной версии.</p>}
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-label={tr('Версии холста')}
+        className="app-dialog"
+      >
+        <h2>{tr('Версии холста')}</h2>
+        <p>
+          {tr('Выберите сохранённую версию. Текущее содержимое останется в истории сохранений.')}
+        </p>
+        {!isTauri() && <p>{tr('История сохранений доступна в настольной версии.')}</p>}
         <div className="revision-list">
           {list.map((r) => (
             <label key={r.id}>
               <input type="radio" checked={chosen === r.id} onChange={() => setChosen(r.id)} />
-              {new Date(r.createdAt).toLocaleString('ru')} · {r.objects} объектов
+              {formatDate(r.createdAt)} · {r.objects} {' ' + tr('объектов')}
             </label>
           ))}
         </div>
-        {isTauri() && !list.length && <p>Предыдущих версий пока нет.</p>}
-        {error && <p role="alert">{error}</p>}
+        {isTauri() && !list.length && <p>{tr('Предыдущих версий пока нет.')}</p>}
+        {error && <p role="alert">{translateMessage(error)}</p>}
         <div className="dialog-actions">
           <button disabled={busy} onClick={onClose}>
-            Закрыть
+            {tr('Закрыть')}
           </button>
           <button
             disabled={busy || chosen === null}
@@ -61,7 +69,7 @@ export default function RevisionsPanel({
               }
             }}
           >
-            Восстановить выбранную версию
+            {tr('Восстановить выбранную версию')}
           </button>
         </div>
       </section>

@@ -2,6 +2,7 @@ import { invoke, isTauri } from '@tauri-apps/api/core';
 import type { Size } from '../../domain/geometry';
 import { supportsMaterial } from '../../domain/materials';
 import type { CanvasItem, Theme } from '../../domain/scene';
+import { t as tr } from '../../i18n/index';
 import Numeric from './controls/NumericField';
 import type { CellSelection } from './DomObjects';
 import AppearanceProperties from './properties/AppearanceProperties';
@@ -69,28 +70,28 @@ export default function PropertiesPanel({
     </>
   );
   return (
-    <aside className="properties-panel" aria-label="Свойства">
-      <h2>{selected.length ? `Выделено: ${selected.length}` : 'Оформление страны'}</h2>
+    <aside className="properties-panel" aria-label={tr('Свойства')}>
+      <h2>{selected.length ? tr('Выделено: {0}', selected.length) : tr('Оформление страны')}</h2>
       {item && (
         <>
           <div className="property-grid">
             <Numeric label="X" value={item.x} onChange={(x) => patch({ x })} />
             <Numeric label="Y" value={item.y} onChange={(y) => patch({ y })} />
             <Numeric
-              label="Ширина"
+              label={tr('Ширина')}
               value={sizeOf(item).width * (item.scaleX ?? 1)}
               min={1}
               onChange={(v) => resize('width', v)}
             />
             <Numeric
-              label="Высота"
+              label={tr('Высота')}
               value={sizeOf(item).height * (item.scaleY ?? 1)}
               min={1}
               onChange={(v) => resize('height', v)}
             />
           </div>
           <Numeric
-            label="Поворот, °"
+            label={tr('Поворот, °')}
             value={item.rotation ?? 0}
             onChange={(rotation) => patch({ rotation })}
           />
@@ -102,7 +103,7 @@ export default function PropertiesPanel({
       {!!selected.length && (
         <>
           <Numeric
-            label="Прозрачность, %"
+            label={tr('Прозрачность, %')}
             value={(item?.opacity ?? 1) * 100}
             min={0}
             max={100}
@@ -110,9 +111,9 @@ export default function PropertiesPanel({
           />
           {!item?.glass?.enabled && (
             <label className="property-field">
-              Цвет
+              {tr('Цвет')}
               <input
-                aria-label="Цвет объекта"
+                aria-label={tr('Цвет объекта')}
                 type="color"
                 value={
                   item?.fill ??
@@ -130,16 +131,16 @@ export default function PropertiesPanel({
             !['image', 'table', 'video', 'audio', 'link', 'disclosure'].includes(item.kind) && (
               <>
                 <label className="property-field">
-                  Обводка
+                  {tr('Обводка')}
                   <input
                     type="color"
-                    aria-label="Цвет обводки"
+                    aria-label={tr('Цвет обводки')}
                     value={item.stroke ?? '#578b9a'}
                     onChange={(e) => patch({ stroke: e.target.value })}
                   />
                 </label>
                 <Numeric
-                  label="Толщина линии"
+                  label={tr('Толщина линии')}
                   value={item.strokeWidth ?? 2}
                   min={0}
                   max={100}
@@ -149,7 +150,7 @@ export default function PropertiesPanel({
             )}
           {item && (
             <Numeric
-              label="Тень"
+              label={tr('Тень')}
               value={item.shadowBlur ?? 0}
               min={0}
               max={100}
@@ -159,19 +160,19 @@ export default function PropertiesPanel({
           {item && ['line', 'arrow', 'stroke'].includes(item.kind) && (
             <>
               <label className="property-field">
-                Тип линии
+                {tr('Тип линии')}
                 <select
-                  aria-label="Тип линии"
+                  aria-label={tr('Тип линии')}
                   value={item.dash?.length ? 'dashed' : 'solid'}
                   onChange={(e) => patch({ dash: e.target.value === 'dashed' ? [10, 7] : [] })}
                 >
-                  <option value="solid">Сплошная</option>
-                  <option value="dashed">Пунктирная</option>
+                  <option value="solid">{tr('Сплошная')}</option>
+                  <option value="dashed">{tr('Пунктирная')}</option>
                 </select>
               </label>
               {item.kind === 'stroke' && (
                 <Numeric
-                  label="Сглаживание"
+                  label={tr('Сглаживание')}
                   value={item.tension ?? 0}
                   min={0}
                   max={1}
@@ -186,7 +187,7 @@ export default function PropertiesPanel({
                       checked={item.arrowStart ?? false}
                       onChange={(e) => patch({ arrowStart: e.target.checked })}
                     />
-                    Наконечник в начале
+                    {tr('Наконечник в начале')}
                   </label>
                   <label className="check-field">
                     <input
@@ -194,7 +195,7 @@ export default function PropertiesPanel({
                       checked={item.arrowEnd ?? true}
                       onChange={(e) => patch({ arrowEnd: e.target.checked })}
                     />
-                    Наконечник в конце
+                    {tr('Наконечник в конце')}
                   </label>
                 </>
               )}
@@ -202,7 +203,7 @@ export default function PropertiesPanel({
           )}
           {item && ['rectangle', 'square'].includes(item.kind) && (
             <Numeric
-              label="Скругление"
+              label={tr('Скругление')}
               value={item.cornerRadius ?? 8}
               min={0}
               max={200}
@@ -212,9 +213,9 @@ export default function PropertiesPanel({
           {item?.kind === 'disclosure' && <DisclosureProperties item={item} patch={patch} />}
           {(item?.kind === 'note' || item?.kind === 'disclosure' || table) && (
             <label className="property-field">
-              Шрифт
+              {tr('Шрифт')}
               <select
-                aria-label="Шрифт текста"
+                aria-label={tr('Шрифт текста')}
                 value={item.fontFamily ?? theme.fontFamily}
                 onChange={(e) => patch({ fontFamily: e.target.value })}
               >
@@ -227,20 +228,20 @@ export default function PropertiesPanel({
           {item?.kind === 'image' && (
             <div className="panel-actions">
               <button disabled={item.locked} onClick={() => onCrop(item)}>
-                Обрезать изображение
+                {tr('Обрезать изображение')}
               </button>
               {item.crop && (
                 <button disabled={item.locked} onClick={() => onResetCrop(item)}>
-                  Вернуть изображение целиком
+                  {tr('Вернуть изображение целиком')}
                 </button>
               )}
             </div>
           )}
           {item?.kind === 'image' && (
             <label className="property-field">
-              Заменить файл фото
+              {tr('Заменить файл фото')}
               <input
-                aria-label="Заменить файл фото"
+                aria-label={tr('Заменить файл фото')}
                 type="file"
                 accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
                 onChange={(e) => {
@@ -252,19 +253,19 @@ export default function PropertiesPanel({
             </label>
           )}
           {item && ['video', 'audio'].includes(item.kind) && (
-            <button onClick={() => onReplace(item)}>Заменить файл медиа</button>
+            <button onClick={() => onReplace(item)}>{tr('Заменить файл медиа')}</button>
           )}
           {item?.assetId && isTauri() && (
             <div className="panel-actions">
               <button
                 onClick={() => void invoke('open_asset', { assetId: item.assetId, reveal: false })}
               >
-                Открыть оригинал
+                {tr('Открыть оригинал')}
               </button>
               <button
                 onClick={() => void invoke('open_asset', { assetId: item.assetId, reveal: true })}
               >
-                Показать файл в папке
+                {tr('Показать файл в папке')}
               </button>
             </div>
           )}
@@ -274,22 +275,22 @@ export default function PropertiesPanel({
               checked={selected.every((i) => i.locked)}
               onChange={(e) => patch({ locked: e.target.checked })}
             />
-            Заблокировать
+            {tr('Заблокировать')}
           </label>
           <div className="panel-actions">
-            <button onClick={() => layer(true)}>На передний план</button>
-            <button onClick={() => layer(false)}>На задний план</button>
-            <button onClick={() => stepLayer(1)}>На слой выше</button>
-            <button onClick={() => stepLayer(-1)}>На слой ниже</button>
+            <button onClick={() => layer(true)}>{tr('На передний план')}</button>
+            <button onClick={() => layer(false)}>{tr('На задний план')}</button>
+            <button onClick={() => stepLayer(1)}>{tr('На слой выше')}</button>
+            <button onClick={() => stepLayer(-1)}>{tr('На слой ниже')}</button>
             <button disabled={selected.length < 2} onClick={() => group(false)}>
-              Сгруппировать
+              {tr('Сгруппировать')}
             </button>
             <button disabled={!selected.some((i) => i.groupId)} onClick={() => group(true)}>
-              Разгруппировать
+              {tr('Разгруппировать')}
             </button>
-            <button onClick={duplicate}>Дублировать</button>
+            <button onClick={duplicate}>{tr('Дублировать')}</button>
             <button className="danger" onClick={remove}>
-              Удалить
+              {tr('Удалить')}
             </button>
           </div>
         </>

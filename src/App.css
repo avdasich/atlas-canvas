@@ -1421,6 +1421,11 @@ h1 {
 }
 
 /* Optional glass editor panels float above the country background. */
+/* Keep the dropdown above the canvas and floating properties panel. */
+.glass-panels .country-toolbar {
+  position: relative;
+  z-index: 20;
+}
 .glass-panels .editor-body {
   position: relative;
   display: block;
@@ -1507,4 +1512,23 @@ h1 {
     height: 26px;
     font-size: 20px;
   }
+}
+
+.language-select {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.language-select select {
+  padding: 6px;
+  border: 1px solid #607d8d;
+  border-radius: 6px;
+  background: #20323e;
+  color: #fff;
+}
+.editor-file-menu .language-select {
+  padding: 6px 4px 10px;
+  justify-content: space-between;
+  border-bottom: 1px solid #486171;
 }

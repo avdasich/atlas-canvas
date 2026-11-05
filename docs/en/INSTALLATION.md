@@ -8,7 +8,7 @@
 2. Choose a published release and expand **Assets** below its description.
 3. Download the package for your operating system and processor.
 
-![Installers in the release's Assets section](../images/02-installation.svg)
+![A release page on GitHub](../images/02-installation.png)
 
 **Source code (zip/tar.gz)** contains source files, not a ready-to-run app.
 
@@ -25,9 +25,13 @@ Use **Apple menu → About This Mac** to identify your processor.
 | Intel processor                     | **macOS-Intel**         |
 | Apple chip such as M1, M2, M3 or M4 | **macOS-Apple-Silicon** |
 
-Open the **`.dmg`**, drag **Atlas Canvas.app** to **Applications**, then open it there. A matching ZIP is also provided: unzip it and move the `.app` to Applications. Choose one format, not both.
+Open the **`.dmg`**, drag **Atlas Canvas.app** to **Applications**, then open it there.
 
-These builds are not yet signed/notarized with an Apple Developer identity. macOS may request approval to open the app. Download it from the project's official release page.
+The app has an ad-hoc signature that checks its integrity. It does not have an Apple Developer ID or notarization, so macOS can block the first launch.
+
+If you downloaded the package from this project's release page and trust it, try opening the app once, then open **System Settings → Privacy & Security → Open Anyway**. Follow the system prompts. [Apple's explanation](https://support.apple.com/en-us/102445).
+
+If macOS says the app is damaged, do not use the 0.4.1 Mac package: it has an invalid bundle signature. Use a newer package or [build locally](DEVELOPMENT.md). An ad-hoc signature does not guarantee that Gatekeeper will allow a downloaded app; a fully verified public release requires Developer ID and notarization.
 
 ## Linux
 
@@ -38,7 +42,7 @@ Linux packages target **x64**. Builds use Ubuntu 22.04 as their baseline; older 
 
 ## Update
 
-1. In the current app, open **Архив и восстановление → Экспорт всего атласа** (Archive and restore → Export entire atlas).
+1. In the current app, open **Backup and restore → Export entire atlas**.
 2. Keep the `.atlas` backup, then close the app.
 3. Install the new version for the same platform.
 4. Reopen a few countries and check your records before discarding the backup.

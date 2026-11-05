@@ -1,4 +1,5 @@
 import type { Theme } from '../../../domain/scene';
+import { t as tr } from '../../../i18n/index';
 import { ShimmerSettings } from '../SnowShimmer';
 import ThemeLibrary from '../ThemeLibrary';
 import Numeric from '../controls/NumericField';
@@ -23,14 +24,14 @@ export default function AppearanceProperties({
   return (
     <>
       <fieldset className="glass-settings">
-        <legend>Панели редактора</legend>
+        <legend>{tr('Панели редактора')}</legend>
         <label className="check-field">
           <input
             type="checkbox"
             checked={theme.glassPanels ?? false}
             onChange={(e) => setTheme({ ...theme, glassPanels: e.target.checked })}
           />
-          Стеклянные панели
+          {tr('Стеклянные панели')}
         </label>
       </fieldset>
       <ThemeLibrary theme={theme} onChange={setTheme} />
@@ -51,7 +52,7 @@ export default function AppearanceProperties({
             })
           }
         >
-          Светлая
+          {tr('Светлая')}
         </button>
         <button
           onClick={() =>
@@ -65,7 +66,7 @@ export default function AppearanceProperties({
             })
           }
         >
-          Песочная
+          {tr('Песочная')}
         </button>
         <button
           onClick={() =>
@@ -79,7 +80,7 @@ export default function AppearanceProperties({
             })
           }
         >
-          Ночная
+          {tr('Ночная')}
         </button>
         <button
           onClick={() =>
@@ -99,27 +100,27 @@ export default function AppearanceProperties({
             })
           }
         >
-          Снег
+          {tr('Снег')}
         </button>
       </div>
       <label className="property-field">
-        Тип фона
+        {tr('Тип фона')}
         <select
-          aria-label="Тип фона"
+          aria-label={tr('Тип фона')}
           value={theme.backgroundType ?? 'solid'}
           onChange={(e) =>
             setTheme({ ...theme, backgroundType: e.target.value as Theme['backgroundType'] })
           }
         >
-          <option value="solid">Цвет</option>
-          <option value="gradient">Градиент</option>
-          <option value="image">Изображение</option>
+          <option value="solid">{tr('Цвет')}</option>
+          <option value="gradient">{tr('Градиент')}</option>
+          <option value="image">{tr('Изображение')}</option>
         </select>
       </label>
       <label className="property-field">
-        Фон
+        {tr('Фон')}
         <input
-          aria-label="Цвет фона"
+          aria-label={tr('Цвет фона')}
           type="color"
           value={theme.background}
           onChange={(e) => setTheme({ ...theme, background: e.target.value })}
@@ -128,16 +129,16 @@ export default function AppearanceProperties({
       {theme.backgroundType === 'gradient' && (
         <>
           <label className="property-field">
-            Второй цвет
+            {tr('Второй цвет')}
             <input
               type="color"
-              aria-label="Второй цвет фона"
+              aria-label={tr('Второй цвет фона')}
               value={theme.secondary ?? '#dce8ec'}
               onChange={(e) => setTheme({ ...theme, secondary: e.target.value })}
             />
           </label>
           <Numeric
-            label="Угол градиента"
+            label={tr('Угол градиента')}
             value={theme.angle ?? 135}
             onChange={(angle) => setTheme({ ...theme, angle })}
           />
@@ -146,7 +147,7 @@ export default function AppearanceProperties({
       {theme.backgroundType === 'image' && (
         <>
           <label className="property-field">
-            Фоновое изображение
+            {tr('Фоновое изображение')}
             <input
               type="file"
               accept="image/png,image/jpeg,image/webp"
@@ -154,45 +155,45 @@ export default function AppearanceProperties({
             />
           </label>
           <select
-            aria-label="Размещение фона"
+            aria-label={tr('Размещение фона')}
             value={theme.imageMode ?? 'cover'}
             onChange={(e) =>
               setTheme({ ...theme, imageMode: e.target.value as Theme['imageMode'] })
             }
           >
-            <option value="cover">Заполнить</option>
-            <option value="contain">Вписать</option>
-            <option value="repeat">Повторять</option>
-            <option value="stretch">Растянуть</option>
+            <option value="cover">{tr('Заполнить')}</option>
+            <option value="contain">{tr('Вписать')}</option>
+            <option value="repeat">{tr('Повторять')}</option>
+            <option value="stretch">{tr('Растянуть')}</option>
           </select>
           <Numeric
-            label="Масштаб фонового изображения, %"
+            label={tr('Масштаб фонового изображения, %')}
             value={(theme.imageScale ?? 1) * 100}
             min={10}
             max={1000}
             onChange={(n) => setTheme({ ...theme, imageScale: n / 100 })}
           />
           <Numeric
-            label="Сдвиг фона X"
+            label={tr('Сдвиг фона X')}
             value={theme.imageX ?? 0}
             onChange={(imageX) => setTheme({ ...theme, imageX })}
           />
           <Numeric
-            label="Сдвиг фона Y"
+            label={tr('Сдвиг фона Y')}
             value={theme.imageY ?? 0}
             onChange={(imageY) => setTheme({ ...theme, imageY })}
           />
         </>
       )}
       <Numeric
-        label="Непрозрачность фона, %"
+        label={tr('Непрозрачность фона, %')}
         value={(theme.backgroundOpacity ?? 1) * 100}
         min={0}
         max={100}
         onChange={(n) => setTheme({ ...theme, backgroundOpacity: n / 100 })}
       />
       <label className="property-field">
-        Цвет текста страны
+        {tr('Цвет текста страны')}
         <input
           type="color"
           value={theme.textColor ?? '#243447'}
@@ -200,20 +201,20 @@ export default function AppearanceProperties({
         />
       </label>
       <label className="property-field">
-        Узор
+        {tr('Узор')}
         <select
-          aria-label="Узор фона"
+          aria-label={tr('Узор фона')}
           value={theme.pattern}
           onChange={(e) => setTheme({ ...theme, pattern: e.target.value as Theme['pattern'] })}
         >
-          <option value="dots">Точки</option>
-          <option value="grid">Сетка</option>
-          <option value="lines">Линии</option>
-          <option value="none">Без узора</option>
+          <option value="dots">{tr('Точки')}</option>
+          <option value="grid">{tr('Сетка')}</option>
+          <option value="lines">{tr('Линии')}</option>
+          <option value="none">{tr('Без узора')}</option>
         </select>
       </label>
       <label className="property-field">
-        Цвет узора
+        {tr('Цвет узора')}
         <input
           type="color"
           value={theme.patternColor ?? '#85929e'}
@@ -221,14 +222,14 @@ export default function AppearanceProperties({
         />
       </label>
       <Numeric
-        label="Прозрачность узора, %"
+        label={tr('Прозрачность узора, %')}
         value={(theme.patternOpacity ?? 0.3) * 100}
         min={0}
         max={100}
         onChange={(v) => setTheme({ ...theme, patternOpacity: v / 100 })}
       />
       <Numeric
-        label="Шаг сетки"
+        label={tr('Шаг сетки')}
         value={theme.gridSize ?? 22}
         min={4}
         max={200}
@@ -240,19 +241,19 @@ export default function AppearanceProperties({
           checked={theme.snap ?? false}
           onChange={(e) => setTheme({ ...theme, snap: e.target.checked })}
         />
-        Привязка к сетке
+        {tr('Привязка к сетке')}
       </label>
       <label className="property-field">
-        Шрифт страны
+        {tr('Шрифт страны')}
         <select
-          aria-label="Шрифт страны"
+          aria-label={tr('Шрифт страны')}
           value={theme.fontFamily}
           onChange={(e) => setTheme({ ...theme, fontFamily: e.target.value })}
         >
           {fonts}
         </select>
       </label>
-      <button onClick={importFont}>Добавить локальный шрифт</button>
+      <button onClick={importFont}>{tr('Добавить локальный шрифт')}</button>
     </>
   );
 }

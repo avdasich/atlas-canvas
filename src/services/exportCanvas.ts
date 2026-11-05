@@ -8,6 +8,7 @@ import { pdfFromJpeg, pdfFromJpegs } from '../domain/pdf';
 import type { CanvasItem, Scene } from '../domain/scene';
 import { drawShimmer, snowCrystals } from '../domain/shimmer';
 import { coveredCell, mergeAt } from '../domain/table';
+import { t as tr } from '../i18n/index';
 import { exportedMaterial, materialRaster } from './materialRaster';
 import { richLayout, textConfig } from './textLayout';
 import { vectorNode } from './vectorDrawing';
@@ -16,7 +17,7 @@ async function image(url: string) {
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error('Не удалось открыть изображение для экспорта'));
+    img.onerror = () => reject(new Error(tr('Не удалось открыть изображение для экспорта')));
     img.src = url;
   });
 }
@@ -26,7 +27,7 @@ export async function exportCanvas(
   region: 'all' | 'viewport',
   format: 'png' | 'pdf' | 'pdf-pages',
 ) {
-  if (!isTauri()) throw new Error('Сохранение PNG/PDF доступно в настольном приложении.');
+  if (!isTauri()) throw new Error(tr('Сохранение PNG/PDF доступно в настольном приложении.'));
   const measure = (i: CanvasItem) => {
     if (i.richText) return richLayout(i, scene.theme.fontFamily);
     const n = new Konva.Text(textConfig(i, scene.theme.fontFamily));
@@ -245,7 +246,7 @@ export async function exportCanvas(
             width: size.width,
             height: 28,
             padding: 8,
-            text: item.title ?? 'Сноски',
+            text: item.title ?? tr('Сноски'),
             fontSize: 11,
             fill: '#526775',
           }),
@@ -268,7 +269,7 @@ export async function exportCanvas(
               width: size.width,
               height: disclosureHeader,
               padding: 14,
-              text: `${section.collapsed ? '▸' : '▾'} ${section.title || 'Без заголовка'}`,
+              text: `${section.collapsed ? '▸' : '▾'} ${section.title || tr('Без заголовка')}`,
               fontFamily: item.fontFamily ?? scene.theme.fontFamily,
               fontSize: 16,
               fontStyle: 'bold',
@@ -302,7 +303,7 @@ export async function exportCanvas(
             width: size.width,
             height: 28,
             padding: 8,
-            text: item.title ?? 'Таблица',
+            text: item.title ?? tr('Таблица'),
             fontSize: 11,
             fill: '#526775',
           }),
@@ -355,7 +356,7 @@ export async function exportCanvas(
           new Konva.Text({
             ...size,
             padding: 15,
-            text: `${item.kind === 'video' ? '▶ Видео' : item.kind === 'audio' ? '♫ Аудио' : '↗ Ссылка'}\n${item.title ?? ''}\n${item.url ?? 'Медиа включено в переносимый архив .atlas'}`,
+            text: `${item.kind === 'video' ? tr('▶ Видео') : item.kind === 'audio' ? tr('♫ Аудио') : tr('↗ Ссылка')}\n${item.title ?? ''}\n${item.url ?? tr('Медиа включено в переносимый архив .atlas')}`,
             fontSize: 15,
             fill: '#243447',
           }),
@@ -366,7 +367,7 @@ export async function exportCanvas(
     const canvas = stage.toCanvas();
     const blob = await new Promise<Blob>((resolve, reject) =>
       canvas.toBlob(
-        (b) => (b ? resolve(b) : reject(new Error('Не удалось создать изображение'))),
+        (b) => (b ? resolve(b) : reject(new Error(tr('Не удалось создать изображение')))),
         format !== 'png' ? 'image/jpeg' : 'image/png',
         0.94,
       ),
@@ -385,7 +386,7 @@ export async function exportCanvas(
           .drawImage(canvas, 0, y, page.width, page.height, 0, 0, page.width, page.height);
         const blob = await new Promise<Blob>((resolve, reject) =>
           page.toBlob(
-            (b) => (b ? resolve(b) : reject(new Error('Не удалось создать страницу PDF'))),
+            (b) => (b ? resolve(b) : reject(new Error(tr('Не удалось создать страницу PDF')))),
             'image/jpeg',
             0.94,
           ),

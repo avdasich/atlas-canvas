@@ -15,19 +15,10 @@ test('release assembly rejects missing platforms and hashes every complete downl
   const dir = await mkdtemp(path.join(tmpdir(), 'atlas-release-'));
   try {
     await mkdir(path.join(dir, 'release-assets'));
-    await mkdir(path.join(dir, 'demo'));
     await writeFile(path.join(dir, 'package.json'), JSON.stringify({ version: '1.2.3' }));
-    for (const name of ['Atlas-Canvas-Iceland.atlas', 'README.md', 'README.en.md'])
-      await writeFile(path.join(dir, 'demo', name), 'public demo');
-    await writeFile(
-      path.join(dir, 'demo', 'README.md'),
-      '[English](README.en.md)\n![Demo](preview.png)',
-    );
     const files = [
       'macOS-Intel.dmg',
-      'macOS-Intel.zip',
       'macOS-Apple-Silicon.dmg',
-      'macOS-Apple-Silicon.zip',
       'Windows-x64-setup.exe',
       'Linux-x64.deb',
       'Linux-x64.AppImage',
@@ -39,23 +30,18 @@ test('release assembly rejects missing platforms and hashes every complete downl
         .status,
       0,
     );
-    assert.equal((await readdir(path.join(dir, 'release-assets'))).length, 6);
+    assert.equal((await readdir(path.join(dir, 'release-assets'))).length, 4);
     const last = files.at(-1);
     await writeFile(path.join(dir, 'release-assets', last), `package:${last}`);
     run('prepare-release.mjs', dir);
-    const instructions = await readFile(
-      path.join(dir, 'release-assets', 'DEMO-README.ru.md'),
-      'utf8',
-    );
-    assert.match(
-      instructions,
-      /https:\/\/github\.com\/[^\s]+\/blob\/v1\.2\.3\/demo\/README\.en\.md/,
-    );
-    assert.match(instructions, /preview\.png\?raw=true/);
     const sums = (await readFile(path.join(dir, 'release-assets', 'SHA256SUMS.txt'), 'utf8'))
       .trim()
       .split('\n');
-    assert.equal(sums.length, 10);
+    assert.equal(sums.length, 5);
+    assert.deepEqual(
+      (await readdir(path.join(dir, 'release-assets'))).sort(),
+      [...files, 'SHA256SUMS.txt'].sort(),
+    );
     for (const line of sums) {
       const [hash, name] = line.split('  ');
       assert.equal(
@@ -110,3 +96,48 @@ test('packaging preserves installer bytes and gives Windows/Linux explicit archi
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test(
+  'macOS packaging accepts a sealed app and rejects a changed executable',
+  { skip: process.platform !== 'darwin' },
+  async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'atlas-macos-signature-'));
+    const arm = process.arch === 'arm64';
+    const target = arm ? 'aarch64-apple-darwin' : 'x86_64-apple-darwin';
+    const platform = arm ? 'macOS-Apple-Silicon' : 'macOS-Intel';
+    const base = path.join(dir, 'src-tauri', 'target', target, 'release', 'bundle');
+    const app = path.join(base, 'macos', 'Atlas Canvas.app');
+    const binary = path.join(app, 'Contents', 'MacOS', 'tauri-app');
+    try {
+      await writeFile(path.join(dir, 'package.json'), JSON.stringify({ version: '1.2.3' }));
+      await mkdir(path.dirname(binary), { recursive: true });
+      await mkdir(path.join(base, 'dmg'), { recursive: true });
+      execFileSync('clang', ['-arch', arm ? 'arm64' : 'x86_64', '-x', 'c', '-', '-o', binary], {
+        input: 'int main(void) { return 0; }',
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+      await writeFile(
+        path.join(app, 'Contents', 'Info.plist'),
+        `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>CFBundleExecutable</key><string>tauri-app</string><key>CFBundleIdentifier</key><string>com.atlas.packaging-test</string><key>CFBundlePackageType</key><string>APPL</string></dict></plist>`,
+      );
+      execFileSync('codesign', ['--force', '--sign', '-', app], { stdio: 'pipe' });
+      await writeFile(path.join(base, 'dmg', 'original.dmg'), 'disk image bytes');
+      run('package-desktop.mjs', dir, target, platform);
+      const download = path.join(dir, 'release-assets', `Atlas-Canvas_1.2.3_${platform}.dmg`);
+      assert.equal(await readFile(download, 'utf8'), 'disk image bytes');
+      await rm(download);
+      await writeFile(binary, Buffer.concat([await readFile(binary), Buffer.from('changed')]));
+      assert.notEqual(
+        spawnSync(
+          process.execPath,
+          [fileURLToPath(script('package-desktop.mjs')), target, platform],
+          { cwd: dir },
+        ).status,
+        0,
+      );
+      assert.deepEqual(await readdir(path.join(dir, 'release-assets')), []);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  },
+);

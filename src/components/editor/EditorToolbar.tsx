@@ -1,3 +1,5 @@
+import { t as tr } from '../../i18n/index';
+import LanguageSelect from '../LanguageSelect';
 export type ToolbarMenuItem = {
   label: string;
   disabled?: boolean;
@@ -22,41 +24,42 @@ export default function EditorToolbar(props: Props) {
   return (
     <header className="country-toolbar">
       <button disabled={props.busy} onClick={() => void props.onBack()}>
-        ← Карта
+        {tr('← Карта')}
       </button>
       <div className="country-heading">
         <strong>{props.countryName}</strong>
-        <small>Личный атлас</small>
+        <small>{tr('Личный атлас')}</small>
       </div>
       <div className="toolbar-spacer" />
       <button
-        aria-label="Отменить"
-        title="Отменить (⌘/Ctrl+Z)"
+        aria-label={tr('Отменить')}
+        title={tr('Отменить (⌘/Ctrl+Z)')}
         disabled={!props.canUndo || props.busy}
         onClick={props.onUndo}
       >
         ↶
       </button>
       <button
-        aria-label="Повторить"
-        title="Повторить (⌘/Ctrl+Shift+Z)"
+        aria-label={tr('Повторить')}
+        title={tr('Повторить (⌘/Ctrl+Shift+Z)')}
         disabled={!props.canRedo || props.busy}
         onClick={props.onRedo}
       >
         ↷
       </button>
-      <button title="Показать всё (F)" onClick={props.onFit}>
-        Показать всё
+      <button title={tr('Показать всё (F)')} onClick={props.onFit}>
+        {tr('Показать всё')}
       </button>
-      <button title="Просмотр (Shift+P)" onClick={props.onView}>
-        Просмотр
+      <button title={tr('Просмотр (Shift+P)')} onClick={props.onView}>
+        {tr('Просмотр')}
       </button>
-      <button title="Поиск (⌘/Ctrl+F)" onClick={props.onSearch}>
-        Поиск
+      <button title={tr('Поиск (⌘/Ctrl+F)')} onClick={props.onSearch}>
+        {tr('Поиск')}
       </button>
       <details className="editor-file-menu">
-        <summary>Ещё</summary>
+        <summary>{tr('Ещё')}</summary>
         <div>
+          <LanguageSelect />
           {props.menu.map((item) => (
             <button
               key={item.label}
@@ -69,11 +72,11 @@ export default function EditorToolbar(props: Props) {
         </div>
       </details>
       <button
-        title="Свойства (Shift+I)"
+        title={tr('Свойства (Shift+I)')}
         aria-pressed={props.properties}
         onClick={props.onProperties}
       >
-        Свойства
+        {tr('Свойства')}
       </button>
     </header>
   );

@@ -2,6 +2,7 @@ import { invoke, isTauri } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { useEffect, useRef, useState } from 'react';
 import { countries } from '../../domain/world';
+import { countryName, t as tr, translateMessage } from '../../i18n/index';
 import { flushBeforeExit } from '../../services/exitGuard';
 type Preview = {
   token: string;
@@ -29,7 +30,7 @@ export default function ArchivePanel({
       off: (() => void) | undefined;
     void listen<{ id: string; bytes: number }>('atlas-operation', (e) => {
       if (e.payload.id === operationId.current)
-        setProgress(`Обработано ${(e.payload.bytes / 1048576).toFixed(1)} МиБ`);
+        setProgress(tr('Обработано {0} МиБ', (e.payload.bytes / 1048576).toFixed(1)));
     }).then((fn) => {
       if (disposed) fn();
       else off = fn;
@@ -43,7 +44,7 @@ export default function ArchivePanel({
     setBusy(true);
     setMessage('');
     operationId.current = crypto.randomUUID();
-    setProgress('Подготовка…');
+    setProgress(tr('Подготовка…'));
     try {
       await flushBeforeExit();
       await action();
@@ -61,15 +62,16 @@ export default function ArchivePanel({
         className="app-dialog archive-dialog"
         role="dialog"
         aria-modal="true"
-        aria-label="Архив и восстановление"
+        aria-label={tr('Архив и восстановление')}
       >
-        <h2>Архив и восстановление</h2>
+        <h2>{tr('Архив и восстановление')}</h2>
         <p>
-          Архив .atlas содержит сцены, оформление и оригиналы вложений; полный архив также включает
-          библиотеку оформлений и настройки карты. Его можно перенести на другой компьютер.
+          {tr(
+            'Архив .atlas содержит сцены, оформление и оригиналы вложений; полный архив также включает библиотеку оформлений и настройки карты. Его можно перенести на другой компьютер.',
+          )}
         </p>
         {!isTauri() ? (
-          <p>Экспорт с вложениями и восстановление доступны в настольном приложении.</p>
+          <p>{tr('Экспорт с вложениями и восстановление доступны в настольном приложении.')}</p>
         ) : !preview ? (
           <>
             <div className="dialog-actions">
@@ -81,11 +83,11 @@ export default function ArchivePanel({
                       countryId: null,
                       operationId: operationId.current,
                     });
-                    setMessage(path ? `Архив сохранён: ${path}` : 'Экспорт отменён');
+                    setMessage(path ? tr('Архив сохранён: {0}', path) : tr('Экспорт отменён'));
                   })
                 }
               >
-                Экспорт всего атласа
+                {tr('Экспорт всего атласа')}
               </button>
               {countryId && (
                 <button
@@ -96,11 +98,11 @@ export default function ArchivePanel({
                         countryId,
                         operationId: operationId.current,
                       });
-                      setMessage(path ? `Холст сохранён: ${path}` : 'Экспорт отменён');
+                      setMessage(path ? tr('Холст сохранён: {0}', path) : tr('Экспорт отменён'));
                     })
                   }
                 >
-                  Экспорт этой страны
+                  {tr('Экспорт этой страны')}
                 </button>
               )}
               <button
@@ -115,7 +117,7 @@ export default function ArchivePanel({
                   })
                 }
               >
-                Открыть архив для восстановления
+                {tr('Открыть архив для восстановления')}
               </button>
               <button
                 disabled={busy}
@@ -125,25 +127,31 @@ export default function ArchivePanel({
                   })
                 }
               >
-                Папка резервных копий
+                {tr('Папка резервных копий')}
               </button>
             </div>
             <p className="panel-hint">
-              Автоматическая копия создаётся при сохранении, не чаще раза в час. Копии не удаляются
-              автоматически. Перед экспортом откройте и перенесите прежние холсты из localStorage.
+              {tr(
+                'Автоматическая копия создаётся при сохранении, не чаще раза в час. Копии не удаляются автоматически. Перед экспортом откройте и перенесите прежние холсты из localStorage.',
+              )}
             </p>
           </>
         ) : (
           <>
-            <h3>Проверка архива завершена</h3>
+            <h3>{tr('Проверка архива завершена')}</h3>
             <p>
-              {preview.countries.length} стран · {preview.assets} вложений
+              {preview.countries.length} {' ' + tr('стран ·') + ' '}
+              {preview.assets} {' ' + tr('вложений')}
             </p>
             <ul className="archive-countries">
               {preview.countries.map((c) => (
                 <li key={c.countryId}>
-                  {countries.find((x) => x.id === c.countryId)?.name ?? c.countryId} — {c.count}{' '}
-                  объектов {c.conflict && <strong>· уже существует</strong>}
+                  {(() => {
+                    const country = countries.find((x) => x.id === c.countryId);
+                    return country ? countryName(country) : c.countryId;
+                  })()}{' '}
+                  — {c.count} {tr('объектов') + ' '}
+                  {c.conflict && <strong>{tr('· уже существует')}</strong>}
                 </li>
               ))}
             </ul>
@@ -154,11 +162,12 @@ export default function ArchivePanel({
                 onChange={(e) => setReplace(e.target.checked)}
                 disabled={busy}
               />
-              Заменить существующие страны и общие оформления версиями из архива
+              {tr('Заменить существующие страны и общие оформления версиями из архива')}
             </label>
             <p className="panel-hint">
-              По умолчанию существующие страны пропускаются. Перед восстановлением будет создана
-              копия текущего атласа.
+              {tr(
+                'По умолчанию существующие страны пропускаются. Перед восстановлением будет создана копия текущего атласа.',
+              )}
             </p>
             <button
               disabled={busy}
@@ -175,33 +184,37 @@ export default function ArchivePanel({
                   });
                   setPreview(null);
                   setMessage(
-                    `Восстановлено стран: ${result.imported}. Пропущено: ${result.skipped}.`,
+                    tr(
+                      'Восстановлено стран: {0}. Пропущено: {1}.',
+                      result.imported,
+                      result.skipped,
+                    ),
                   );
                   onRestored();
                 })
               }
             >
-              Восстановить
+              {tr('Восстановить')}
             </button>
           </>
         )}
         {busy && (
           <>
-            <p role="status">{progress || 'Выполняется операция…'}</p>
+            <p role="status">{progress || tr('Выполняется операция…')}</p>
             <button
               onClick={() => {
                 if (operationId.current)
                   void invoke('cancel_operation', { id: operationId.current });
-                setProgress('Отмена…');
+                setProgress(tr('Отмена…'));
               }}
             >
-              Остановить операцию
+              {tr('Остановить операцию')}
             </button>
           </>
         )}
         {message && (
           <p role="status" className="operation-message">
-            {message}
+            {translateMessage(message)}
           </p>
         )}
         <div className="dialog-actions">
@@ -212,7 +225,7 @@ export default function ArchivePanel({
               onClose();
             }}
           >
-            Закрыть
+            {tr('Закрыть')}
           </button>
         </div>
       </section>

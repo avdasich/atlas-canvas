@@ -94,3 +94,7 @@ Vite reports the large lazy detailed-map chunk (about 756 kB before gzip). The w
 `npm run notices` collects production npm/Cargo dependency notices into `public/licenses/notices.json`. Review components that have SPDX metadata without a full license text before release. Additional upstream license sources and commit IDs are in `public/licenses/upstream/index.json`.
 
 Font sources and hashes are in `public/fonts/SOURCES.md`. Map data is bundled through world-atlas; the detailed map is lazy-loaded. Opening a local atlas needs no remote service. Demo media use the separate [credits](../../demo/SOURCES.md).
+
+## Interface language
+
+`src/i18n/en.ts` contains English translations keyed by Russian source text. Components translate interface labels at render time. Country IDs and user content are never translated. `ui-language` is saved in SQLite and intentionally excluded from portable archives. Native dialogs and the custom Quit item follow the selected language. `tests/language.test.mjs` checks catalog coverage, placeholders, country IDs and queued error messages.

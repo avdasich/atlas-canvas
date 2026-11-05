@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { DisclosureSection } from '../../domain/disclosure';
 import type { SectionDraft } from '../../domain/drafts';
+import { t as tr } from '../../i18n/index';
 
 function SectionText({
   section,
@@ -21,13 +22,13 @@ function SectionText({
   if (readOnly)
     return (
       <div className="disclosure-reading" style={{ height: section.height }}>
-        {section.content || 'В этом разделе пока нет текста.'}
+        {section.content || tr('В этом разделе пока нет текста.')}
       </div>
     );
   return (
     <textarea
-      aria-label={`Текст раздела ${section.title}`}
-      placeholder="Добавьте подробности, пояснения или источники…"
+      aria-label={tr('Текст раздела {0}', section.title)}
+      placeholder={tr('Добавьте подробности, пояснения или источники…')}
       maxLength={100000}
       value={draft}
       style={{ height: section.height }}
@@ -96,7 +97,7 @@ export default function DisclosureCard({
               }}
             >
               <span aria-hidden="true">{collapsed ? '▸' : '▾'}</span>
-              <strong>{section.title || 'Без заголовка'}</strong>
+              <strong>{section.title || tr('Без заголовка')}</strong>
             </button>
             {!collapsed && (
               <SectionText

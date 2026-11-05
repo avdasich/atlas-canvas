@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { defaultMapAppearance, validMapAppearance } from '../domain/appearance';
 import type { Country } from '../domain/countries';
 import { countries, countryForFeature, worldFeatures } from '../domain/world';
+import { countryName, t as tr, translateMessage } from '../i18n/index';
 import { repository } from '../services/SceneRepository';
 import { usePreferences } from '../services/usePreferences';
 import SnowShimmer, { ShimmerSettings } from './editor/SnowShimmer';
@@ -40,7 +41,7 @@ export default function WorldMap({
         if (active) setDetailedFeatures(features);
       })
       .catch((e) => {
-        if (active) setError(`Детальная карта недоступна: ${String(e)}`);
+        if (active) setError(tr('Детальная карта недоступна: {0}', String(e)));
       });
     return () => {
       active = false;
@@ -60,7 +61,7 @@ export default function WorldMap({
   const features =
     view.width < WIDTH * 0.8 && detailedFeatures.length ? detailedFeatures : worldFeatures;
   const results = countries.filter((c) =>
-    `${c.nameRu} ${c.nameEn}`.toLocaleLowerCase().includes(query.toLocaleLowerCase().trim()),
+    `${countryName(c)} ${c.nameEn}`.toLocaleLowerCase().includes(query.toLocaleLowerCase().trim()),
   );
   useEffect(() => {
     let cancelled = false;
@@ -70,7 +71,7 @@ export default function WorldMap({
         if (!cancelled) setFilled(ids);
       })
       .catch((e) => {
-        if (!cancelled) setError(`Не удалось прочитать заполненность стран: ${String(e)}`);
+        if (!cancelled) setError(tr('Не удалось прочитать заполненность стран: {0}', String(e)));
       });
     return () => {
       cancelled = true;
@@ -92,7 +93,7 @@ export default function WorldMap({
     const feature = detailed.find((f) => countryForFeature(f).id === country.id);
     if (!feature) {
       setFocusMessage(
-        'Эта страна слишком мала для геометрии карты. Её холст доступен по кнопке ниже.',
+        tr('Эта страна слишком мала для геометрии карты. Её холст доступен по кнопке ниже.'),
       );
       return;
     }
@@ -165,8 +166,8 @@ export default function WorldMap({
       <div className="map-bar">
         <div className="country-search">
           <input
-            aria-label="Поиск страны"
-            placeholder="Найти страну на русском или английском…"
+            aria-label={tr('Поиск страны')}
+            placeholder={tr('Найти страну на русском или английском…')}
             value={query}
             onFocus={() => setShowList(true)}
             onChange={(e) => {
@@ -179,47 +180,47 @@ export default function WorldMap({
             }}
           />
           <button aria-expanded={showList} onClick={() => setShowList((v) => !v)}>
-            Все страны
+            {tr('Все страны')}
           </button>
           {showList && (
-            <div className="country-results" role="list" aria-label="Страны">
+            <div className="country-results" role="list" aria-label={tr('Страны')}>
               {results.map((c) => (
                 <div className="country-result-row" key={c.id}>
                   <button onClick={() => onCountrySelect(c)}>
                     <span>
-                      {c.nameRu}
-                      <small>{c.nameEn}</small>
+                      {countryName(c)}
+                      <small>{countryName(c) === c.nameEn ? c.nameRu : c.nameEn}</small>
                     </span>
                     {filled.includes(c.id) && (
-                      <span className="filled-dot" title="Есть записи">
+                      <span className="filled-dot" title={tr('Есть записи')}>
                         ●
                       </span>
                     )}
                   </button>
                   <button
-                    aria-label={`Показать на карте: ${c.nameRu}`}
+                    aria-label={tr('Показать на карте: {0}', c.nameRu)}
                     onClick={() => focusCountry(c)}
                   >
                     ⌖
                   </button>
                 </div>
               ))}
-              {!results.length && <p>Страна не найдена</p>}
+              {!results.length && <p>{tr('Страна не найдена')}</p>}
             </div>
           )}
         </div>
         <div className="map-controls">
-          <button onClick={() => setSettingsOpen(true)}>Оформление карты</button>
-          <button aria-label="Приблизить карту" onClick={() => zoom(1.5)}>
+          <button onClick={() => setSettingsOpen(true)}>{tr('Оформление карты')}</button>
+          <button aria-label={tr('Приблизить карту')} onClick={() => zoom(1.5)}>
             +
           </button>
-          <button aria-label="Отдалить карту" onClick={() => zoom(1 / 1.5)}>
+          <button aria-label={tr('Отдалить карту')} onClick={() => zoom(1 / 1.5)}>
             −
           </button>
-          <button onClick={() => setView(initialView)}>Сброс вида</button>
+          <button onClick={() => setView(initialView)}>{tr('Сброс вида')}</button>
         </div>
       </div>
-      {error && <p role="alert">{error}</p>}
+      {error && <p role="alert">{translateMessage(error)}</p>}
       <div
         className="map-surface"
         style={
@@ -236,7 +237,7 @@ export default function WorldMap({
         <svg
           ref={svgRef}
           className="world-map"
-          aria-label="Карта мира"
+          aria-label={tr('Карта мира')}
           viewBox={`${view.x} ${view.y} ${view.width} ${view.height}`}
           onMouseDown={start}
           onMouseMove={move}
@@ -266,19 +267,17 @@ export default function WorldMap({
                   if (!moved.current) onCountrySelect(c);
                 }}
               >
-                <title>
-                  {c.nameRu} · {c.nameEn}
-                </title>
+                <title>{countryName(c)}</title>
               </path>
             );
           })}
         </svg>
         {focused && (
           <div className="country-focus">
-            <strong>{focused.nameRu}</strong>
-            {focusMessage && <p>{focusMessage}</p>}
-            <button onClick={() => onCountrySelect(focused)}>Открыть холст</button>
-            <button aria-label="Снять подсветку страны" onClick={() => setFocused(null)}>
+            <strong>{countryName(focused)}</strong>
+            {focusMessage && <p>{translateMessage(focusMessage)}</p>}
+            <button onClick={() => onCountrySelect(focused)}>{tr('Открыть холст')}</button>
+            <button aria-label={tr('Снять подсветку страны')} onClick={() => setFocused(null)}>
               ×
             </button>
           </div>
@@ -290,16 +289,16 @@ export default function WorldMap({
             className="app-dialog"
             role="dialog"
             aria-modal="true"
-            aria-label="Оформление карты"
+            aria-label={tr('Оформление карты')}
           >
-            <h2>Оформление карты</h2>
+            <h2>{tr('Оформление карты')}</h2>
             {(
               [
-                ['background', 'Фон карты'],
-                ['countries', 'Пустые страны'],
-                ['filled', 'Заполненные страны'],
-                ['borders', 'Границы'],
-                ['highlight', 'Подсветка'],
+                ['background', tr('Фон карты')],
+                ['countries', tr('Пустые страны')],
+                ['filled', tr('Заполненные страны')],
+                ['borders', tr('Границы')],
+                ['highlight', tr('Подсветка')],
               ] as const
             ).map(([key, label]) => (
               <label key={key} className="property-field">
@@ -319,22 +318,24 @@ export default function WorldMap({
               value={appearance.value.shimmer}
               onChange={(shimmer) => appearance.update({ ...appearance.value, shimmer })}
             />
-            {appearance.error && <p role="alert">{appearance.error}</p>}
+            {appearance.error && <p role="alert">{translateMessage(appearance.error)}</p>}
             <div className="dialog-actions">
               <button onClick={() => appearance.update(structuredClone(defaultMapAppearance))}>
-                Сбросить оформление
+                {tr('Сбросить оформление')}
               </button>
-              <button onClick={() => setSettingsOpen(false)}>Готово</button>
+              <button onClick={() => setSettingsOpen(false)}>{tr('Готово')}</button>
             </div>
           </section>
         </div>
       )}
       <footer className="map-footer">
         <span>
-          <i className="legend-dot" /> Есть записи
+          <i className="legend-dot" /> {' ' + tr('Есть записи')}
         </span>
-        <span>Колесо — масштаб · Мышь — перемещение</span>
-        <span>{countries.length} стран и территорий в каталоге</span>
+        <span>{tr('Колесо — масштаб · Мышь — перемещение')}</span>
+        <span>
+          {countries.length} {' ' + tr('стран и территорий в каталоге')}
+        </span>
       </footer>
     </>
   );

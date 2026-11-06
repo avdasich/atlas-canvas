@@ -1,106 +1,100 @@
-[Русский](../DEVELOPMENT.md) · [Main page](../../README.en.md) · [Releases](RELEASE.md)
+[Русский](../DEVELOPMENT.md) · [Main page](../../README.en.md) · [User guide](USER_GUIDE.md)
 
-# Development and architecture
+# Development and releases
 
-For ordinary use, see the [user guide](USER_GUIDE.md).
+## Run from source
 
-## Stack and local development
-
-React 19, TypeScript, Vite, Konva/react-konva, D3 Geo/TopoJSON; Tauri 2 and Rust; SQLite through rusqlite; ZIP archives with SHA-256 checksums.
+Install Node.js 24, stable Rust and [Tauri's platform prerequisites](https://v2.tauri.app/start/prerequisites/). The demo checker also needs Python 3. Cargo declares Rust 1.88 as the minimum; a separate minimum-version check is not yet configured in CI.
 
 ```sh
 npm ci
 npm run tauri dev
 ```
 
-Install [Tauri's platform prerequisites](https://v2.tauri.app/start/prerequisites/), Node.js 24 and stable Rust. The optional demo checker also needs Python 3 (standard library only); GitHub-hosted build runners already include it. Node 24 supports the test loader's `node:module.registerHooks`. `ATLAS_POLLING=1 npm run dev` is an optional filesystem-watching fallback. A browser preview has separate storage and fewer native capabilities.
+`npm run dev` starts a browser preview with separate storage and limited native features. Use `ATLAS_POLLING=1 npm run dev` if filesystem watching fails. Build the native app locally with `npm run tauri build`.
 
-## Module map
-
-| Area                                                                              | Responsibility                                                            |
-| --------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| `src/App.tsx`, `WorldMap.tsx`, `CountryCanvas.tsx`                                | Main screen, map/search, country loading/migration/recovery               |
-| `components/editor/CanvasEditor.tsx`                                              | Shared state, selection, camera, history and action coordination          |
-| `SceneStage.tsx`, `ItemView.tsx`, `DomObjects.tsx`                                | Konva rendering, vector objects and HTML tables/players/expandable notes  |
-| `CanvasBackground.tsx`, `SnowShimmer.tsx`, `CanvasNavigator.tsx`                  | Background, animation, minimap, rulers and guides                         |
-| `properties/`, `controls/`                                                        | Appearance panels and numeric controls                                    |
-| `RichTextEditor.tsx`, dialogs and panels                                          | Text input, crop, search, revisions, archives and licenses                |
-| `domain/sceneTypes.ts`, `scene.ts`                                                | Types, defaults, scene validation and migration                           |
-| `domain/geometry.ts`, `layers.ts`, `selection.ts`, `snapping.ts`                  | Bounds, placement, depth, selection and snapping                          |
-| `domain/table.ts`, `richText.ts`, `disclosure.ts`, `crop.ts`, `materials.ts`      | Pure content/object transformations                                       |
-| `domain/shortcuts.ts`, `shimmer.ts`, `pdf.ts`                                     | Shortcut catalog, crystals and PDF construction                           |
-| `services/useCanvasPointer.ts`, `useEditorShortcuts.ts`, `useHybridHitRouting.ts` | Pointer/keyboard lifecycles and Konva hits above HTML                     |
-| `useCanvasTransfers.ts`, `exportCanvas.ts`, `svg.ts`                              | Media import/replacement/downloads, image/PDF export and SVG sanitization |
-| `vectorDrawing.ts`, `textLayout.ts`, `materialRaster.ts`, `ObjectMaterial.tsx`    | Shared vector/text layout, material masks, glass and clipped sparkles     |
-| `SceneRepository.ts`, `SceneWriter.ts`, `useScene.ts`                             | Storage API, ordered write queue and React state                          |
-| `preferenceWrites.ts`, `usePreferences.ts`, `exitGuard.ts`                        | Shared preferences and draining writes on exit                            |
-| `state/history.ts`                                                                | Session Undo/Redo                                                         |
-| `src-tauri/src/storage.rs`, `schema.sql`, `validation.rs`, `object_features.rs`   | SQLite, transactions and native validation                                |
-| `images.rs`, `media.rs`, `operations.rs`                                          | Managed originals/previews, URLs, progress and cancellation               |
-| `archive.rs`, `archive/`, `revisions.rs`, `preferences.rs`                        | Portable backups, restore, history and preferences                        |
-| `demo/`, `scripts/build-demo.py`, `scripts/check-demo.*`                          | Public sample archive, rebuild and integrity validation                   |
-| `.github/workflows/`, release scripts                                             | Four native targets, consistent package names and draft assembly          |
-
-`CanvasEditor` coordinates state and actions. Specialized logic lives in domain modules, hooks and components; pure domain algorithms do not import React components.
-
-## Depth and materials
-
-The order of `scene.items` defines depth. `canvasRuns` separates visible vector groups from invisible HTML/material hit proxies; adjacent proxies share one canvas. CSS z-index follows the same item order.
-
-`isDomItem` means actual HTML objects, not glass objects. `useHybridHitRouting` forwards hits on vectors above HTML into Konva's normal selection/drag lifecycle.
-
-Glass uses CSS backdrop filtering through an alpha mask of the actual letters/shape. Konva retains an invisible hit proxy. PNG/PDF are composed sequentially: glass samples already-rendered content, transforms it into local coordinates and applies CPU blur; shimmer uses a static time-zero frame. Export blur can differ slightly from WebView rendering.
-
-Cropping stores a normalized source rectangle. `applyImageCrop` preserves remaining pixels' world position under rotation/scaling without changing the asset ID. Both preview and original export use this normalized rectangle.
-
-Expandable-section drafts join note/table drafts in autosave and exit flushing. Read-only expansion is local, so viewing does not alter stored section states.
-
-## Storage invariants
-
-- Preserve the production identifier **`com.m1.tauri-app`**. A different identifier opens another data directory. Use a separate identifier for QA and transfer fixtures through `.atlas`.
-- Country IDs are stable across localization. Supplemental IDs 900–904 are source features, not additional ISO countries.
-- Current **scene format is 5**; frontend/native validators read 2/3/4/5 and save as 5. Never downgrade the saved format; old editors must reject unsupported data rather than discard new features.
-- SQLite **`user_version=2`** is a separate database-schema version. Migrations must preserve records and attachments.
-- `SceneWriter` serializes writes. Failed writes keep their latest value for retry; exit drains scene and preference queues. A scene update records its previous state in revisions atomically.
-- Rich text stores safe runs, not arbitrary HTML. Plain `content` matches their text. Merged cells retain covered content.
-- Asset IDs point to managed files; external source paths are not persistent references. `safe_asset_path` confines access to the managed assets directory.
-- Do not delete original media when deleting an object: Undo, revisions, themes or other countries may still reference it. Garbage collection is not implemented.
-- Full archives include preferences and their asset/font references. Restore remaps structural IDs/font properties, not arbitrary note text, and creates a backup before applying changes. Corrupt/incompatible JSON is not silently replaced with an empty scene.
-- Export flushes current input and pending writes before loading the saved scene.
-
-## Style and checks
+Use a separate identifier when testing with an empty database:
 
 ```sh
-npm run format
-npm run format:check
-npm run docs:shortcuts
-npm test
-npm run demo:check
-npm run build
-cargo test --locked --manifest-path src-tauri/Cargo.toml
-git diff --check
+npm run tauri build -- --debug --bundles app --config '{"identifier":"com.m1.atlas-canvas.my-check","productName":"Atlas Canvas My Check"}'
 ```
 
-Formatting organizes TypeScript imports, runs Prettier and runs rustfmt. Generated data, binary resources, original license texts and npm lockfiles are excluded from Prettier. Both shortcut pages are generated from the same action catalog; English action labels live in the documentation generator.
+## Project layout
 
-Tests cover geometry/history, migration, write failures, tables/merges, rich text, shortcuts, crop/sections/materials, archive integrity, reference remapping and restore rollback. The release tests also require all platform packages before draft assembly. Use the command output for current test counts.
+| Directory                     | Contents                                                           |
+| ----------------------------- | ------------------------------------------------------------------ |
+| `src/components/`             | Map, editor, tools and property panels                             |
+| `src/domain/`                 | Scene format, geometry, tables, text, crop and materials           |
+| `src/services/`, `src/state/` | Save queues, input, import, export and Undo/Redo                   |
+| `src/i18n/`                   | RU/EN; interface translations never change canvas content          |
+| `src-tauri/src/`              | SQLite, managed assets, archives, scene revisions and cancellation |
+| `tests/`, `scripts/`, `demo/` | Checks, resource preparation and the demonstration atlas           |
 
-Manual native checks remain necessary for WebView, system dialogs, codecs, depth/hit routing, keyboard focus, saved-state restart and exports. Run downloaded packages on Intel Mac, Apple Silicon, Windows and Linux; a local macOS build does not prove all targets work.
+React 19 renders the interface, Konva renders vectors, and Tauri 2 provides the native shell. The order of `scene.items` defines depth for both Konva and HTML objects. Test rendering, selection, dragging and table input when changing this layer. Glass and sparkles export as a static snapshot; blur may differ from WebView rendering.
 
-Vite reports the large lazy detailed-map chunk (about 756 kB before gzip). The warning is visible rather than disabled. No cross-platform frame-rate claim is made for large scenes.
+## Data and compatibility
+
+- Preserve the production identifier **`com.m1.tauri-app`**: it determines the data directory. Do not open two instances of the same database.
+- Current **scene format is 5**, with readers for 2–5. SQLite **`user_version=2`** and the **`.atlas` manifest version is 1**. These are independent versions; changes require compatible migrations.
+- Country IDs are stable across languages; 900–904 are supplemental source-map features. User content is never translated. SQLite stores `ui-language`, which is excluded from portable archives.
+- `SceneWriter` serializes scene writes. Exit and export drain scene, preference and input queues. Read errors must not replace content with an empty scene; scene updates and previous revisions are transactional.
+- Managed media live in `assets/`, with access checked by `safe_asset_path`. Do not delete originals when removing an object: Undo, revisions, themes or other countries may reference them. SQLite without its media is not a complete backup.
+- Full `.atlas` archives include scenes, media and shared preferences. Restore creates a backup first; cancellation before commit rolls back new files. Remapping changes structural references, not note text.
+- Rich text uses safe text runs, not arbitrary HTML. Crop stores a normalized area and preserves the original; merged cells retain covered text. Expandable-note drafts join autosave, while expansion in view mode stays local.
 
 ## Automatic backups
 
-Automatic backups start in a separate blocking task after a scene is committed. Managed `AutomaticBackups` state permits one worker; archive-write errors use `atlas-backup-error`. At the start of a task, while holding the worker permit, only regular `.auto-*.pending` and `.auto-*.partial` files left by interrupted tasks are removed, before empty/unchanged-atlas checks. Directories, symlinks, `before-import-*`/`recovery-*` temporary files and other names without the `.auto-` prefix are left alone. Temporary-file cleanup is best-effort: a failed removal does not stop attempts on other files or block archive creation. These cleanup errors (even when skipping a copy) and pruning errors after publication use the separate `atlas-backup-cleanup-warning` event. The current worker creates its temporary files after cleanup. Eligibility compares `MAX(scenes.updated_at)` with the latest automatic copy. `write_archive` first writes `.auto-<id>.<newid>.partial`, publishes `.pending` by hard link or copying once the ZIP is complete, then deletes its own `.partial`. An archive is atomically renamed from its own `.pending` file before pruning `auto-*.atlas` to 5 copies. Its timestamp marks the start of reading so saves during archiving remain eligible for another copy. On the first successful automatic backup after updating, automatic copies beyond 5 will be permanently deleted, starting with the oldest. Move any copies you want to keep out of the backup folder beforehand. Shared preference changes alone do not trigger a backup. Exit waits for scene/settings writes, not the background archive; use manual export when a completed snapshot is needed immediately.
+- A single background worker runs after a scene commit. Eligibility uses `MAX(scenes.updated_at)`; unchanged canvases do not create another copy. Shared preference changes alone do not trigger copying.
+- Checks run at most once per 60 seconds. An archive failure delays retries for an hour after completion; successful results clear the backoff, while cleanup warnings do not trigger it. Another attempt occurs on the next save after the interval.
+- Full archives are created at most once per hour. Writing proceeds through `.auto-<id>.<newid>.partial`, then `.pending`, then `auto-*.atlas`. The final copy's timestamp marks the start of archiving so later saves remain eligible.
+- After a successful publication, keep the latest **5** automatic copies. The first new backup after updating permanently deletes older copies beyond this limit. Manual exports and pre-restore copies remain untouched.
+- Before writing, the worker removes only regular orphaned `.auto-*.pending` and `.auto-*.partial` files. Directories, symlinks, `before-import-*`, `recovery-*` and names without `.auto-` are excluded. The current worker creates its temporary files after cleanup.
+- Temporary-file cleanup is best-effort: one failed removal does not stop the others or archive creation. Archive errors use `atlas-backup-error`; cleanup uses `atlas-backup-cleanup-warning`. Each kind/raw-message pair appears once per process session, including A → B → A.
+- **Saved** confirms the canvas write, not completion of a background archive. Exit does not wait for automatic backups; use manual export for a completed snapshot.
 
-`AutomaticBackups` uses a monotonic last-attempt time: workers start at most once per 60 seconds, archive failures delay retries for an hour after completion, and successful results clear the backoff; cleanup warnings do not trigger it. Notices are deduplicated by kind and raw message for the entire process session (including A → B → A). Rejected starts do not extend deadlines; checks resume on the next canvas save after the interval.
+## Checks before a PR
 
-## Resources and notices
+```sh
+node scripts/check-version.mjs
+npx tsc --noEmit
+npm test
+npm run format:check
+npm run demo:check
+cargo test --manifest-path src-tauri/Cargo.toml
+cargo fmt --manifest-path src-tauri/Cargo.toml --check
+cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
+git diff --check
+```
 
-`npm run notices` collects production npm/Cargo dependency notices into `public/licenses/notices.json`. Review components that have SPDX metadata without a full license text before release. Additional upstream license sources and commit IDs are in `public/licenses/upstream/index.json`.
+`npm run format` formats code and organizes imports. `npm run docs:shortcuts` regenerates both shortcut pages from the shared catalog. Run `npm run notices` after changing dependencies and review license coverage. Generated data and original license texts are excluded from formatting.
 
-Font sources and hashes are in `public/fonts/SOURCES.md`. Map data is bundled through world-atlas; the detailed map is lazy-loaded. Opening a local atlas needs no remote service. Demo media use the separate [credits](../../demo/SOURCES.md).
+Manually check installation, native dialogs, codecs, overlapping-object selection, input, restart persistence, import/export and cancellation of long operations. A successful build on one platform does not replace running on the others.
 
-## Interface language
+## Releases
 
-`src/i18n/en.ts` contains English translations keyed by Russian source text. Components translate interface labels at render time. Country IDs and user content are never translated. `ui-language` is saved in SQLite and intentionally excluded from portable archives. Native dialogs and the custom Quit item follow the selected language. `tests/language.test.mjs` checks catalog coverage, placeholders, country IDs and queued error messages.
+`Desktop checks` validates PRs and builds Intel Mac, Apple Silicon, Windows x64 and Linux x64 packages. Code is checked again on `main` after merging; changes confined to Markdown and `docs/` skip this repeat build. `build-desktop.yml` holds the shared matrix, while `Desktop release` prepares releases from tags. Actions artifacts are available for 14 days.
+
+1. Choose a new version and update `package.json`, `package-lock.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` and `src-tauri/Cargo.lock`. Update CHANGELOG and `.github/RELEASE_NOTES.md`.
+2. Run the checks above, open a separate PR and wait for four successful builds. Download the artifacts and test on the target systems.
+3. After merging, tag the version currently recorded in the files:
+
+```sh
+git switch main
+git pull --ff-only origin main
+node scripts/check-version.mjs
+atlas_version=$(node -p "require('./package.json').version")
+git tag "v$atlas_version"
+RELEASE_TAG="v$atlas_version" node scripts/check-version.mjs --release
+git push origin "v$atlas_version"
+```
+
+4. Wait for `Desktop release` to finish. One draft must contain five installers—two DMGs, EXE, DEB and AppImage—and `SHA256SUMS.txt`. The demo is a separate download; GitHub adds source archives automatically.
+5. Review the description, installation and saved records, then publish the draft. Drafts are not available to ordinary users. Use a new version rather than replacing published tags or assets.
+
+To retry, open **Actions → Desktop release → Run workflow** and enter an existing tag. The version script checks the tag, commit and all version files. See [Installation](INSTALLATION.md) for platform and package-signing details.
+
+## Resources
+
+The sample archive is [demo/Atlas-Canvas-Iceland.atlas](../../demo/Atlas-Canvas-Iceland.atlas). It is built and checked through `demo/scenes.json`, `scripts/build-demo.py` and `scripts/check-demo.*`. Personal archives are ignored by Git. Credits: [demo/SOURCES.md](../../demo/SOURCES.md) and [public/fonts/SOURCES.md](../../public/fonts/SOURCES.md). Map data is bundled through `world-atlas`; a local atlas needs no remote service.
+
+Licenses in [public/licenses](../../public/licenses) and extra source records in `public/licenses/upstream/index.json` are bundled with the app and must remain in the repository.

@@ -2,12 +2,13 @@
 
 # Change history
 
-## Unreleased
+## 0.4.3
 
 - Automatic backups run outside the canvas save path, at most once per hour and only after canvas changes. Only one backup worker runs at a time; errors retain the existing notification.
 - Keep the latest 5 automatic archives, pruning only after a successful new copy. On the first successful automatic backup after updating, automatic copies beyond 5 will be permanently deleted. Manual exports and pre-restore copies are excluded from retention.
 - Orphaned automatic-backup temporary files (`.auto-*.pending` and `.auto-*.partial`) are removed at the start of the next background task, including when it skips creating a copy. Failure to delete one temporary file does not prevent attempts to remove the others or create a new archive; cleanup errors use a separate warning.
 - Automatic-backup checks run at most once per minute, archive failures delay retries for one hour, and identical errors or warnings appear once per session while new messages appear immediately.
+- Simplified Russian and English README files and guides; development and releases share one page. Documentation-only changes skip the repeat build on main.
 
 ## 0.4.2
 

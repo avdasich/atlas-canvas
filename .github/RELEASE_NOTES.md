@@ -15,9 +15,12 @@
 
 ## Изменения / Changes
 
-- Русский и английский интерфейс: язык выбирается на карте или в меню «Ещё». / Russian and English interface: choose a language on the map or in More.
-- Исправлены стеклянное меню и подпись macOS-пакетов. / Fixed the glass-panel menu and macOS bundle signing.
-- Обновлены инструкции и скриншоты. / Updated guides and screenshots.
+- Автокопии создаются в фоне после изменений холста, не чаще раза в час. Сохранение записей не ждёт архивации. / Automatic backups run in the background after canvas changes, at most once per hour, without blocking canvas saves.
+- Остаются последние 5 автокопий. Незавершённые временные файлы очищаются при следующей проверке; отказ удаления одного файла не мешает созданию нового архива. / Keep the latest 5 automatic copies. Interrupted temporary files are cleaned up on the next check; one failed removal does not block a new archive.
+- Проверки выполняются не чаще раза в минуту; после ошибки архивации повтор откладывается на час. Одинаковые ошибки и предупреждения показываются один раз за сессию. / Checks run at most once per minute, archive failures delay retries for one hour, and identical errors or warnings appear once per session.
+- Упрощены README и инструкции на русском и английском. / Simplified Russian and English README files and guides.
+
+**При первой успешной автокопии после обновления старые автокопии сверх 5 будут удалены безвозвратно. Ручные экспорты и копии перед восстановлением сохраняются.** / **The first successful automatic backup after updating permanently deletes automatic copies beyond 5. Manual exports and pre-restore copies are kept.**
 
 [Попробовать демо](https://github.com/avdasich/atlas-canvas/blob/main/demo/README.md) · [Try the demo](https://github.com/avdasich/atlas-canvas/blob/main/demo/README.en.md)
 

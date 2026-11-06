@@ -34,17 +34,15 @@ Open [Releases](https://github.com/avdasich/atlas-canvas/releases), select a pub
 | Windows x64                                             | File ending in `Windows-x64-setup.exe`                      |
 | Linux x64                                               | `.deb` for compatible Debian/Ubuntu systems, or `.AppImage` |
 
-The release workflow prepares these packages; availability depends on the selected published release. **Source code** archives are for developers, not installers.
+Choose the package for your processor and operating system. **Source code** archives are not installers. If a package is missing, check another published release. Available features depend on the version you choose.
 
 [Step-by-step installation →](docs/en/INSTALLATION.md)
 
 ## Your first canvas
 
-1. Open Atlas Canvas and choose a country on the map or through search.
-2. Click **Add text** and write a note.
-3. Use **Add photo**, or drag an image from your computer.
-4. Select an object and adjust it in **Properties**.
-5. Wait for **Saved**. You can now return to the map or close the app.
+1. Choose a country on the map or through search.
+2. Add a note or photograph. Change its size, colors and appearance in **Properties**.
+3. Wait for **Saved** before closing the app.
 
 Use the mouse wheel to zoom. Drag empty space, or hold Space and drag, to pan. Press **F** to fit all objects into view.
 
@@ -62,13 +60,9 @@ On the other computer, choose **Open archive to restore** and select the file. *
 
 ## Help
 
-- [Installation and updating](docs/en/INSTALLATION.md)
-- [Complete user guide](docs/en/USER_GUIDE.md)
-- [Shortcuts for macOS, Windows and Linux](docs/en/SHORTCUTS.md)
-- [Frequently asked questions](docs/en/USER_GUIDE.md#frequently-asked-questions)
-- [Report a problem](https://github.com/avdasich/atlas-canvas/issues)
+[Frequently asked questions](docs/en/USER_GUIDE.md#frequently-asked-questions) · [Report a problem](https://github.com/avdasich/atlas-canvas/issues)
 
-This documentation describes the 0.4 source series. Published builds may differ. Audio/video playback also depends on the codecs supported by your system.
+Include your operating system, app version and the steps that led to the problem. Audio/video playback depends on the codecs supported by your system.
 
 ## License
 
@@ -82,6 +76,6 @@ Atlas Canvas is [MIT licensed](LICENSE).
 <details>
 <summary>For developers and the project author</summary>
 
-[Development](docs/en/DEVELOPMENT.md) · [Builds and releases](docs/en/RELEASE.md) · [Change history](CHANGELOG.en.md)
+[Development and releases](docs/en/DEVELOPMENT.md) · [Change history](CHANGELOG.en.md)
 
 </details>

@@ -1,10 +1,14 @@
-name: Platform builds
+name: Desktop checks
+run-name: Check ${{ github.head_ref || github.ref_name }}
 
 on:
   workflow_dispatch:
   pull_request:
   push:
     branches: [main]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
 
 permissions:
   contents: read

@@ -198,7 +198,15 @@ For a portable backup:
 
 Existing countries are skipped by default. The replacement checkbox explicitly allows overwriting them; a backup is created before restoration. A full archive also includes shared theme/settings libraries and their media/font references. The public demo intentionally omits shared settings.
 
-Automatic backups are created when saving, at most once per hour, and are not automatically deleted. **Canvas versions** in More lets you inspect and restore earlier saved states; they are separate from session Undo.
+A full `.atlas` backup runs in the background after a changed canvas is saved, at most once per hour. Canvas saving does not wait for the archive. The backup folder keeps the latest **5 automatic copies**; older ones are deleted only after a new copy is saved successfully. Manual exports and pre-restore copies are kept. Unchanged canvases do not produce another automatic backup.
+
+On the first successful automatic backup after updating, automatic copies beyond 5 will be permanently deleted, starting with the oldest. Move any copies you want to keep out of the backup folder beforehand.
+
+Orphaned automatic-backup temporary files (`.auto-*.pending` and `.auto-*.partial`) from an interrupted archive are removed at the start of the next background task after a canvas save. If one removal fails, the app tries the others and continues creating the archive, reporting a separate cleanup warning. If a new copy was written but older copies could not be deleted, a cleanup warning appears; the new copy remains available and the folder may temporarily contain more than 5 copies.
+
+**Saved** confirms the canvas write, not completion of its background backup. If you need a backup immediately, use **Export entire atlas** and wait for the successful export message.
+
+**Canvas versions** in More lets you inspect and restore earlier saved states; they are separate from session Undo.
 
 Do not move just the database without its media. `.atlas` is the convenient format for transferring everything together. There is no automatic cloud synchronization.
 

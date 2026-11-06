@@ -48,16 +48,22 @@ function App() {
   useEffect(() => {
     if (!isTauri()) return;
     let cancelled = false;
-    let off: (() => void) | undefined;
-    void listen<string>('atlas-backup-error', (e) =>
-      setBackupError(tr('Автокопия не создана: {0}', e.payload)),
-    ).then((fn) => {
-      if (cancelled) fn();
-      else off = fn;
-    });
+    const unsubscribers: (() => void)[] = [];
+    const subscribe = (event: string, message: (error: string) => string) => {
+      void listen<string>(event, (e) => setBackupError(message(translateMessage(e.payload)))).then(
+        (off) => {
+          if (cancelled) off();
+          else unsubscribers.push(off);
+        },
+      );
+    };
+    subscribe('atlas-backup-error', (error) => tr('Автокопия не создана: {0}', error));
+    subscribe('atlas-backup-cleanup-warning', (error) =>
+      tr('Не удалось полностью очистить папку автокопий: {0}', error),
+    );
     return () => {
       cancelled = true;
-      off?.();
+      unsubscribers.forEach((off) => off());
     };
   }, []);
   const [country, setCountry] = useState<Country | null>(null);

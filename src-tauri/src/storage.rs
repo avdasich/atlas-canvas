@@ -115,16 +115,14 @@ pub async fn load_scene(app: AppHandle, country_id: String) -> Result<Option<Str
 #[tauri::command]
 pub async fn save_scene(app: AppHandle, country_id: String, scene_json: String) -> Result<()> {
     let dir = directory(&app)?;
+    let save_dir = dir.clone();
     tauri::async_runtime::spawn_blocking(move || {
-        write_scene(&mut connect(&dir)?, &country_id, &scene_json, None)?;
-        if let Err(error) = crate::archive::automatic_backup(&dir) {
-            use tauri::Emitter;
-            let _ = app.emit("atlas-backup-error", error);
-        }
-        Ok(())
+        write_scene(&mut connect(&save_dir)?, &country_id, &scene_json, None)
     })
     .await
-    .map_err(err)?
+    .map_err(err)??;
+    crate::archive::schedule_automatic_backup(app, dir);
+    Ok(())
 }
 #[tauri::command]
 pub async fn migrate_scene(

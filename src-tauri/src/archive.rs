@@ -13,9 +13,10 @@ use std::{
     fs,
     io::{Read, Write},
     path::{Path, PathBuf},
-    sync::Mutex,
+    sync::{Arc, Mutex},
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Manager, State};
 use tauri_plugin_dialog::DialogExt;
 use zip::{ZipArchive, ZipWriter, write::SimpleFileOptions};
 #[derive(Clone, Serialize, Deserialize)]
@@ -50,6 +51,120 @@ pub struct Staged {
 }
 #[derive(Default)]
 pub struct Imports(pub Mutex<HashMap<String, Staged>>);
+
+pub(crate) const AUTOMATIC_BACKUP_LIMIT: usize = 5;
+const AUTOMATIC_BACKUP_INTERVAL: Duration = Duration::from_secs(3600);
+
+const AUTOMATIC_BACKUP_CHECK_INTERVAL: Duration = Duration::from_secs(60);
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+enum BackupNotice {
+    Error,
+    CleanupWarning,
+}
+
+impl BackupNotice {
+    fn event(self) -> &'static str {
+        match self {
+            Self::Error => "atlas-backup-error",
+            Self::CleanupWarning => "atlas-backup-cleanup-warning",
+        }
+    }
+}
+
+#[derive(Default)]
+struct BackupSchedule {
+    running: bool,
+    last_attempt: Option<Instant>,
+    retry_after: Option<Instant>,
+    shown_notices: BTreeSet<(BackupNotice, String)>,
+}
+
+#[derive(Default)]
+pub struct AutomaticBackups {
+    schedule: Arc<Mutex<BackupSchedule>>,
+}
+
+struct BackupPermit(Arc<Mutex<BackupSchedule>>);
+
+impl BackupPermit {
+    fn finish(
+        self,
+        now: Instant,
+        result: Result<Option<String>>,
+    ) -> Option<(BackupNotice, String)> {
+        let mut schedule = self.0.lock().unwrap_or_else(|error| error.into_inner());
+        let notice = match result {
+            Err(error) => {
+                // Wait a full hour after failure, including when archiving itself took a long time.
+                schedule.retry_after = Some(now + AUTOMATIC_BACKUP_INTERVAL);
+                Some((BackupNotice::Error, error))
+            }
+            Ok(warning) => {
+                schedule.retry_after = None;
+                warning.map(|warning| (BackupNotice::CleanupWarning, warning))
+            }
+        };
+        notice.filter(|notice| schedule.shown_notices.insert(notice.clone()))
+    }
+}
+
+impl Drop for BackupPermit {
+    fn drop(&mut self) {
+        self.0
+            .lock()
+            .unwrap_or_else(|error| error.into_inner())
+            .running = false;
+    }
+}
+
+impl AutomaticBackups {
+    fn try_start(&self, now: Instant) -> Option<BackupPermit> {
+        let mut schedule = self
+            .schedule
+            .lock()
+            .unwrap_or_else(|error| error.into_inner());
+        if schedule.running
+            || schedule.last_attempt.is_some_and(|previous| {
+                now.saturating_duration_since(previous) < AUTOMATIC_BACKUP_CHECK_INTERVAL
+            })
+            || schedule.retry_after.is_some_and(|deadline| now < deadline)
+        {
+            return None;
+        }
+        schedule.running = true;
+        schedule.last_attempt = Some(now);
+        Some(BackupPermit(Arc::clone(&self.schedule)))
+    }
+
+    fn spawn(
+        &self,
+        backup: impl FnOnce() -> Result<Option<String>> + Send + 'static,
+        report_notice: impl FnOnce(BackupNotice, String) + Send + 'static,
+    ) -> bool {
+        let Some(permit) = self.try_start(Instant::now()) else {
+            return false;
+        };
+        tauri::async_runtime::spawn_blocking(move || {
+            let result = backup();
+            if let Some((kind, message)) = permit.finish(Instant::now(), result) {
+                report_notice(kind, message);
+            }
+        });
+        true
+    }
+}
+
+pub(crate) fn schedule_automatic_backup(app: AppHandle, dir: PathBuf) {
+    let worker_app = app.clone();
+    app.state::<AutomaticBackups>().spawn(
+        move || automatic_backup(&dir),
+        move |kind, message| {
+            use tauri::Emitter;
+            let _ = worker_app.emit(kind.event(), message);
+        },
+    );
+}
 fn checksum_with_operation(path: &Path, operation: Option<&Operation>) -> Result<String> {
     let mut f = ProgressReader::new(fs::File::open(path).map_err(err)?, operation);
     let mut h = Sha256::new();
@@ -100,10 +215,10 @@ fn remap(v: &mut Value, m: &BTreeMap<String, String>) {
         Value::Object(o) => {
             for (k, v) in o {
                 if ["assetId", "backgroundAssetId"].contains(&k.as_str()) {
-                    if let Some(id) = v.as_str() {
-                        if let Some(new) = m.get(id) {
-                            *v = Value::String(new.clone());
-                        }
+                    if let Some(id) = v.as_str()
+                        && let Some(new) = m.get(id)
+                    {
+                        *v = Value::String(new.clone());
                     }
                 } else if k == "fontFamily" {
                     if let Some(new) = v
@@ -345,10 +460,10 @@ fn stage_archive_with_operation(
             {
                 return Err("Некорректное вложение".into());
             }
-            if let Some(old) = files.insert(name.clone(), hash.clone()) {
-                if old != *hash {
-                    return Err("Конфликт контрольных сумм".into());
-                }
+            if let Some(old) = files.insert(name.clone(), hash.clone())
+                && old != *hash
+            {
+                return Err("Конфликт контрольных сумм".into());
             }
         }
     }
@@ -745,7 +860,79 @@ pub async fn apply_archive(
     Ok(result)
 }
 
-pub(crate) fn automatic_backup(dir: &Path) -> Result<()> {
+// Cleanup warnings do not block archive creation and are also returned when a copy is skipped.
+fn automatic_backup(dir: &Path) -> Result<Option<String>> {
+    automatic_backup_using(
+        dir,
+        |dir, dest| write_archive(dir, dest, None),
+        |path| fs::remove_file(path),
+    )
+}
+
+fn remove_orphaned_auto_temp_files(
+    folder: &Path,
+    remove: &mut impl FnMut(&Path) -> std::io::Result<()>,
+) -> Vec<String> {
+    let entries = match fs::read_dir(folder) {
+        Ok(entries) => entries,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Vec::new(),
+        Err(error) => return vec![err(error)],
+    };
+    let mut errors = Vec::new();
+    // Called under BackupPermit, before this worker creates any temporary files.
+    for entry in entries {
+        let result: Result<()> = (|| {
+            let entry = entry.map_err(err)?;
+            if entry.file_name().to_str().is_some_and(|name| {
+                name.starts_with(".auto-")
+                    && (name.ends_with(".pending") || name.ends_with(".partial"))
+            }) && entry.file_type().map_err(err)?.is_file()
+            {
+                remove(&entry.path())
+                    .map_err(|error| format!("{}: {error}", entry.path().display()))?;
+            }
+            Ok(())
+        })();
+        if let Err(error) = result {
+            errors.push(error);
+        }
+    }
+    errors
+}
+
+struct AutomaticBackupFile {
+    path: PathBuf,
+    modified: SystemTime,
+}
+
+fn automatic_backup_files(folder: &Path) -> Result<Vec<AutomaticBackupFile>> {
+    let mut backups = Vec::new();
+    for entry in fs::read_dir(folder).map_err(err)? {
+        let entry = entry.map_err(err)?;
+        let name = entry.file_name();
+        if !name
+            .to_str()
+            .is_some_and(|name| name.starts_with("auto-") && name.ends_with(".atlas"))
+            || !entry.file_type().map_err(err)?.is_file()
+        {
+            continue;
+        }
+        backups.push(AutomaticBackupFile {
+            path: entry.path(),
+            modified: entry.metadata().map_err(err)?.modified().map_err(err)?,
+        });
+    }
+    backups.sort_by(|a, b| a.modified.cmp(&b.modified).then(a.path.cmp(&b.path)));
+    Ok(backups)
+}
+
+fn automatic_backup_using(
+    dir: &Path,
+    write: impl FnOnce(&Path, &Path) -> Result<()>,
+    mut remove_file: impl FnMut(&Path) -> std::io::Result<()>,
+) -> Result<Option<String>> {
+    let folder = dir.join("backups");
+    let mut cleanup_errors = remove_orphaned_auto_temp_files(&folder, &mut remove_file);
     let conn = connect(dir)?;
     let has_content: bool = conn
         .query_row(
@@ -755,22 +942,82 @@ pub(crate) fn automatic_backup(dir: &Path) -> Result<()> {
         )
         .map_err(err)?;
     if !has_content {
-        return Ok(());
+        return Ok(cleanup_warning(cleanup_errors));
+    }
+    let latest_change: Option<f64> = conn
+        .query_row(
+            "SELECT (julianday(MAX(updated_at)) - 2440587.5) * 86400.0 FROM scenes",
+            [],
+            |r| r.get(0),
+        )
+        .map_err(err)?;
+    let latest_change =
+        latest_change.ok_or("Не удалось определить время последнего изменения холста.")?;
+    fs::create_dir_all(&folder).map_err(err)?;
+    if let Some(recent) = automatic_backup_files(&folder)?.last()
+        && (recent
+            .modified
+            .elapsed()
+            .map_or(true, |elapsed| elapsed < AUTOMATIC_BACKUP_INTERVAL)
+            || latest_change
+                <= recent
+                    .modified
+                    .duration_since(UNIX_EPOCH)
+                    .map_err(err)?
+                    .as_secs_f64())
+    {
+        return Ok(cleanup_warning(cleanup_errors));
     }
     drop(conn);
-    let folder = dir.join("backups");
-    fs::create_dir_all(&folder).map_err(err)?;
-    let recent = fs::read_dir(&folder)
-        .map_err(err)?
-        .filter_map(|e| e.ok())
-        .filter(|e| e.file_name().to_string_lossy().starts_with("auto-"))
-        .filter_map(|e| e.metadata().ok()?.modified().ok())
-        .max();
-    if recent.is_some_and(|t| t.elapsed().map_or(true, |d| d.as_secs() < 3600)) {
-        return Ok(());
+
+    let id = new_id();
+    let destination = folder.join(format!("auto-{id}.atlas"));
+    let pending = folder.join(format!(".auto-{id}.pending"));
+    // Saves may continue during the archive's read transaction. Completion time would
+    // incorrectly mark those newer changes as already backed up.
+    let started = SystemTime::now();
+    let result = (|| {
+        write(dir, &pending)?;
+        fs::OpenOptions::new()
+            .write(true)
+            .open(&pending)
+            .map_err(err)?
+            .set_modified(started)
+            .map_err(err)?;
+        // The final auto-*.atlas name is visible only after all writes have succeeded,
+        // including on filesystems where write_archive falls back from hard links.
+        fs::rename(&pending, &destination).map_err(err)
+    })();
+    if let Err(error) = result {
+        let _ = fs::remove_file(pending);
+        return Err(error);
     }
-    write_archive(dir, &folder.join(format!("auto-{}.atlas", new_id())), None)
+
+    // A pruning error must not be reported as a failed archive write.
+    let cleanup: Result<()> = (|| {
+        for old in automatic_backup_files(&folder)?
+            .into_iter()
+            .rev()
+            .skip(AUTOMATIC_BACKUP_LIMIT)
+        {
+            remove_file(&old.path).map_err(err)?;
+        }
+        Ok(())
+    })();
+    if let Err(error) = cleanup {
+        cleanup_errors.push(error);
+    }
+    Ok(cleanup_warning(cleanup_errors))
 }
+
+fn cleanup_warning(errors: Vec<String>) -> Option<String> {
+    if errors.is_empty() {
+        None
+    } else {
+        Some(errors.join("\n"))
+    }
+}
+
 #[tauri::command]
 pub fn open_backup_folder(app: AppHandle) -> Result<()> {
     use tauri_plugin_opener::OpenerExt;

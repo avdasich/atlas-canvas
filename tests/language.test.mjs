@@ -82,6 +82,21 @@ test('queued and native errors translate only known messages and preserve paths'
     translateMessage('Архив сохранён: /tmp/Мой атлас.atlas'),
     'Backup saved: /tmp/Мой атлас.atlas',
   );
+  assert.equal(
+    t(
+      'Автокопия не создана: {0}',
+      translateMessage('Не удалось определить время последнего изменения холста.'),
+    ),
+    'Automatic backup failed: Could not determine when the canvas last changed.',
+  );
+  assert.equal(
+    t('Не удалось полностью очистить папку автокопий: {0}', 'permission denied'),
+    'Could not completely clean up the automatic backup folder: permission denied',
+  );
+  assert.equal(
+    t('Перед экспортом откройте и перенесите прежние холсты из localStorage.'),
+    'Migrate any legacy canvases before exporting.',
+  );
   assert.equal(translateMessage('/tmp/Сохранено.png'), '/tmp/Сохранено.png');
   setLanguage('ru');
   assert.equal(translateMessage('Saved'), 'Сохранено');

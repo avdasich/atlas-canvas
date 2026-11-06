@@ -10,7 +10,7 @@ pub(crate) fn validate_id(id: &str) -> Result<()> {
 }
 pub(crate) fn validate_scene(raw: &str) -> Result<bool> {
     let v: Value = serde_json::from_str(raw).map_err(err)?;
-    if !matches!(v["schemaVersion"].as_u64(), Some(2 | 3 | 4 | 5)) {
+    if !matches!(v["schemaVersion"].as_u64(), Some(2..=5)) {
         return Err("Версия холста не поддерживается".into());
     }
     let items = v["items"].as_array().ok_or("Отсутствует список объектов")?;
@@ -58,18 +58,17 @@ fn validate_theme(theme: &Value) -> Result<()> {
     {
         return Err("Повреждено оформление сцены".into());
     }
-    if let Some(s) = theme.get("shimmer") {
-        if s["enabled"].as_bool().is_none()
+    if let Some(s) = theme.get("shimmer")
+        && (s["enabled"].as_bool().is_none()
             || s["intensity"]
                 .as_f64()
                 .is_none_or(|n| !(0.0..=1.0).contains(&n))
             || s["speed"]
                 .as_f64()
                 .is_none_or(|n| !(0.1..=2.0).contains(&n))
-            || !is_color(&s["color"])
-        {
-            return Err("Повреждены настройки переливания".into());
-        }
+            || !is_color(&s["color"]))
+    {
+        return Err("Повреждены настройки переливания".into());
     }
     for key in [
         "snap",
@@ -134,18 +133,18 @@ fn validate_theme(theme: &Value) -> Result<()> {
             return Err("Некорректное положение фона".into());
         }
     }
-    if let Some(mode) = theme.get("imageMode") {
-        if !matches!(
+    if let Some(mode) = theme.get("imageMode")
+        && !matches!(
             mode.as_str(),
             Some("cover" | "contain" | "repeat" | "stretch")
-        ) {
-            return Err("Неизвестное размещение фона".into());
-        }
+        )
+    {
+        return Err("Неизвестное размещение фона".into());
     }
-    if let Some(kind) = theme.get("backgroundType") {
-        if !matches!(kind.as_str(), Some("solid" | "gradient" | "image")) {
-            return Err("Неизвестный тип фона".into());
-        }
+    if let Some(kind) = theme.get("backgroundType")
+        && !matches!(kind.as_str(), Some("solid" | "gradient" | "image"))
+    {
+        return Err("Неизвестный тип фона".into());
     }
     if let Some(asset) = theme.get("backgroundAssetId") {
         validate_asset_id(asset.as_str().ok_or("Нет ID фонового изображения")?)?;
@@ -188,10 +187,10 @@ fn validate_item(item: &Value) -> Result<()> {
         "fontSize",
         "lineHeight",
     ] {
-        if let Some(n) = item.get(key) {
-            if n.as_f64().is_none_or(|v| v <= 0.0) {
-                return Err("Некорректный размер объекта".into());
-            }
+        if let Some(n) = item.get(key)
+            && n.as_f64().is_none_or(|v| v <= 0.0)
+        {
+            return Err("Некорректный размер объекта".into());
         }
     }
     for key in ["rotation", "strokeWidth", "cornerRadius", "shadowBlur"] {
